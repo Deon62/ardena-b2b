@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
    adapts to its context (ink on light surfaces, white on black). */
 export default function Logo({ to = "/", className = "" }) {
   return (
-    <Link to={to} className={`brand ${className}`.trim()} aria-label="Ardena for Businesses">
+    <Link to={to} className={`brand ${className}`.trim()} aria-label="Ardena">
       <svg viewBox="0 0 504.41 108.22" fill="currentColor" aria-hidden="true">
         <path d="M87.17,2.05a35.88,35.88,0,0,0-27.52,1.5L53,6.76l9.26,19.35A45.89,45.89,0,0,1,87.2,67a45.44,45.44,0,0,1-.93,9.23l5.36,11.17a35.9,35.9,0,0,0,48,16.88l6.67-3.21L107.64,20.46A35.75,35.75,0,0,0,87.17,2.05Z" />
         <path d="M63.83,32.44A41.26,41.26,0,1,0,82.3,71,33,33,0,0,0,82.52,67,41.17,41.17,0,0,0,63.83,32.44Z" />
@@ -15,7 +15,6 @@ export default function Logo({ to = "/", className = "" }) {
         <path d="M417,36.84c-17.56,0-24.48,13.19-24.48,22.45V91h12.77V59.61c0-7.56,5.54-11,11.71-11s11.7,3.4,11.7,11V91h12.77V59.29C441.49,50,434.57,36.84,417,36.84Z" />
         <path d="M476.85,37.05c-16.38,0-27.45,11-27.45,27.35S460.47,92,475.9,92c7.76,0,13.19-2.76,15.74-6.06V91h12.77V64.61C504.41,48.11,493.35,37.05,476.85,37.05Zm.11,43.2c-8.94,0-14.79-5.85-14.79-15.75S468,48.75,477,48.75s14.68,5.86,14.68,15.75S485.79,80.25,477,80.25Z" />
       </svg>
-      <span className="brand-badge">B2B</span>
     </Link>
   );
 }

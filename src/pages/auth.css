@@ -11,8 +11,39 @@
 
 .auth-nav {
   position: absolute;
+  top: 36px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-nav .brand svg {
+  height: 24px;
+}
+
+.auth-back {
+  position: absolute;
   top: 32px;
-  left: clamp(24px, 6vw, 96px);
+  left: clamp(20px, 5vw, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  color: var(--ink-soft);
+  background: var(--bg);
+  box-shadow: var(--neo-out-sm);
+  transition: color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.auth-back:hover {
+  color: var(--ink);
+  box-shadow: var(--neo-out);
+}
+
+.auth-back:active {
+  box-shadow: var(--neo-in);
 }
 
 .auth-card {
