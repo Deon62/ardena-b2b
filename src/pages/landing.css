@@ -26,6 +26,11 @@
   padding: 28px 0;
 }
 
+.nav .brand svg,
+.footer .brand svg {
+  height: 28px;
+}
+
 /* ---- Hero (white) ---- */
 
 .hero-body {
