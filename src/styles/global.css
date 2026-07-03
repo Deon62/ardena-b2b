@@ -214,7 +214,9 @@ h3 {
   color: var(--ink-soft);
 }
 
-.field input {
+.field input,
+.field select,
+.field textarea {
   padding: 13px 15px;
   border: none;
   border-radius: var(--radius-sm);
@@ -226,11 +228,18 @@ h3 {
   transition: box-shadow 0.15s var(--ease);
 }
 
-.field input::placeholder {
+.field textarea {
+  resize: vertical;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
   color: var(--ink-mute);
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
   box-shadow: var(--neo-in), 0 0 0 3px var(--brand-soft);
 }
 
