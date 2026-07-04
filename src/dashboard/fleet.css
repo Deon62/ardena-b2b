@@ -81,6 +81,12 @@
   box-shadow: var(--neo-in);
 }
 
+/* primary action living inside a panel toolbar */
+.toolbar-btn {
+  padding: 10px 18px;
+  font-size: 13.5px;
+}
+
 /* ---- Table extras ---- */
 
 .data-table tbody tr {

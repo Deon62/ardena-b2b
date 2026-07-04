@@ -45,19 +45,6 @@ export default function Fleet() {
 
   return (
     <>
-      <div className="page-head-row">
-        <div className="page-head">
-          <h1>Fleet</h1>
-          <p>{vehicles.length} vehicles registered</p>
-        </div>
-        <Link to="/dashboard/fleet/new" className="btn btn-primary">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Add vehicle
-        </Link>
-      </div>
-
       <div className="stat-grid fleet-stats">
         <article className="stat-card">
           <p className="stat-label">Available</p>
@@ -103,6 +90,12 @@ export default function Fleet() {
               </button>
             ))}
           </div>
+          <Link to="/dashboard/fleet/new" className="btn btn-primary toolbar-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add vehicle
+          </Link>
         </div>
 
         <table className="data-table">

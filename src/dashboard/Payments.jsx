@@ -73,11 +73,6 @@ export default function Payments() {
 
   return (
     <>
-      <div className="page-head">
-        <h1>Payments</h1>
-        <p>What you've collected from customers, and what's still out.</p>
-      </div>
-
       <div className="stat-grid fleet-stats">
         <article className="stat-card">
           <p className="stat-label">Collected</p>

@@ -156,14 +156,15 @@
   left: 0;
   right: 0;
   bottom: calc(100% + 10px);
-  background: var(--bg);
+  background: var(--panel);
   box-shadow: var(--neo-out);
   padding: 6px;
   z-index: 3;
   animation: rise 0.2s var(--ease) both;
 }
 
-.tenant-menu button {
+.tenant-menu button,
+.tenant-menu a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -175,12 +176,14 @@
   transition: color 0.15s var(--ease), box-shadow 0.15s var(--ease);
 }
 
-.tenant-menu button:hover {
+.tenant-menu button:hover,
+.tenant-menu a:hover {
   color: var(--ink);
   box-shadow: var(--neo-out-sm);
 }
 
-.tenant-menu button:active {
+.tenant-menu button:active,
+.tenant-menu a:active {
   box-shadow: var(--neo-in);
 }
 
@@ -232,7 +235,7 @@
 }
 
 .stat-card {
-  background: var(--bg);
+  background: var(--panel);
   box-shadow: var(--neo-out);
   border-radius: var(--radius);
   padding: 22px;

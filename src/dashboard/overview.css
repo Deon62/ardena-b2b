@@ -17,7 +17,7 @@
 
 .chart-card,
 .panel-card {
-  background: var(--bg);
+  background: var(--panel);
   box-shadow: var(--neo-out);
   padding: 24px;
   position: relative;

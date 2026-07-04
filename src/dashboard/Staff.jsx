@@ -52,13 +52,6 @@ export default function Staff() {
 
   return (
     <>
-      <div className="page-head">
-        <h1>Staff &amp; roles</h1>
-        <p>
-          {staff.length} of {SEATS} seats used on the Growth plan
-        </p>
-      </div>
-
       <div className="stat-grid fleet-stats">
         <article className="stat-card">
           <p className="stat-label">Active members</p>

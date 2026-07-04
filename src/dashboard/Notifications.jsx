@@ -73,21 +73,6 @@ export default function Notifications() {
 
   return (
     <>
-      <div className="page-head-row">
-        <div className="page-head">
-          <h1>Notifications</h1>
-          <p>{unread > 0 ? `${unread} unread` : "You're all caught up"}</p>
-        </div>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          onClick={markAllRead}
-          disabled={unread === 0}
-        >
-          Mark all read
-        </button>
-      </div>
-
       <section className="panel-card">
         <div className="fleet-toolbar">
           <div className="seg" role="group" aria-label="Filter notifications">
@@ -102,6 +87,14 @@ export default function Notifications() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="btn btn-ghost toolbar-btn"
+            onClick={markAllRead}
+            disabled={unread === 0}
+          >
+            Mark all read
+          </button>
         </div>
 
         <ul className="notif-list">

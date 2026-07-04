@@ -85,11 +85,6 @@ const STATUS_ICON = {
 export default function Overview() {
   return (
     <>
-      <div className="page-head">
-        <h1>Overview</h1>
-        <p>Friday, 3 July 2026 · Acme Car Hire</p>
-      </div>
-
       {/* ---- KPI row ---- */}
       <div className="stat-grid">
         {KPIS.map((k) => (

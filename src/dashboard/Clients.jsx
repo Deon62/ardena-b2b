@@ -67,19 +67,6 @@ export default function Clients() {
 
   return (
     <>
-      <div className="page-head-row">
-        <div className="page-head">
-          <h1>Clients</h1>
-          <p>{clients.length} customers on record</p>
-        </div>
-        <Link to="/dashboard/bookings/new" className="btn btn-primary">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          New booking
-        </Link>
-      </div>
-
       <div className="stat-grid fleet-stats">
         <article className="stat-card">
           <p className="stat-label">Total clients</p>
@@ -130,6 +117,12 @@ export default function Clients() {
               </button>
             ))}
           </div>
+          <Link to="/dashboard/bookings/new" className="btn btn-primary toolbar-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            New booking
+          </Link>
         </div>
 
         <table className="data-table">

@@ -67,11 +67,6 @@ export default function Verification() {
 
   return (
     <>
-      <div className="page-head">
-        <h1>Verification</h1>
-        <p>Identity checks run through Dojah before keys are handed over.</p>
-      </div>
-
       <div className="stat-grid fleet-stats">
         <article className="stat-card">
           <p className="stat-label">Checks this month</p>

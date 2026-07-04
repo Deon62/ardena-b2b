@@ -41,11 +41,6 @@ export default function Settings() {
 
   return (
     <>
-      <div className="page-head">
-        <h1>Settings</h1>
-        <p>Your business profile, plan and notification preferences.</p>
-      </div>
-
       <div className="details-grid">
         <div className="settings-main">
           <section className="panel-card">
