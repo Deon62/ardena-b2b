@@ -1,0 +1,79 @@
+/* ---- Bookings pages (extends fleet.css table/toolbar styles) ---- */
+
+/* Extra lifecycle chips (pending/active/completed live in overview.css) */
+
+.chip.confirmed {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+
+.chip.cancelled {
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+/* ---- New booking: live total ---- */
+
+.booking-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 16px 20px;
+  box-shadow: var(--neo-in);
+}
+
+.booking-total p {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+.booking-total strong {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- Client details: full-width history below the grid ---- */
+
+.history-card {
+  margin-top: 20px;
+}
+
+/* ---- Details side cards ---- */
+
+.pay-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}
+
+.pay-btn {
+  width: 100%;
+  padding: 11px 18px;
+  font-size: 14px;
+}
+
+.side-hint {
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+.spec-link {
+  font-weight: 500;
+  transition: color 0.15s var(--ease);
+}
+
+.spec-link:hover {
+  color: var(--brand-dark);
+}

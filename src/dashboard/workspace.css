@@ -1,0 +1,245 @@
+/* ---- Workspace pages: staff, notifications, settings ---- */
+
+/* Generic disabled button (fleet.css only covers .details-actions) */
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.save-note {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0b7a37;
+  align-self: center;
+}
+
+/* ---- Staff: invite form + role notes ---- */
+
+.invite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.role-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.role-list strong {
+  display: block;
+  font-size: 13.5px;
+}
+
+.role-list span {
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  line-height: 1.5;
+}
+
+/* ---- Notifications feed ---- */
+
+.notif-list {
+  list-style: none;
+}
+
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 15px 6px;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.12s var(--ease);
+}
+
+.notif-list li:last-child .notif-item {
+  border-bottom: none;
+}
+
+.notif-item:hover {
+  background: var(--surface);
+}
+
+.notif-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.notif-icon.blue {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+
+.notif-icon.green {
+  color: #0b7a37;
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.notif-icon.amber {
+  color: #9a6700;
+  background: rgba(217, 119, 6, 0.12);
+}
+
+.notif-icon.gray {
+  color: var(--ink-soft);
+  background: var(--surface);
+}
+
+.notif-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-title {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.notif-item.unread .notif-title {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.notif-meta {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  line-height: 1.5;
+}
+
+.notif-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-mute);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.notif-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+
+/* ---- Settings ---- */
+
+.settings-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.pref-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pref-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pref-desc {
+  font-size: 12.5px;
+  color: var(--ink-mute);
+}
+
+/* Square toggle, in keeping with the sharp-corner brand language */
+
+.switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.switch i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--surface);
+  box-shadow: var(--neo-in);
+  transition: background 0.15s var(--ease);
+  pointer-events: none;
+  position: relative;
+}
+
+.switch i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: var(--bg);
+  box-shadow: var(--neo-out-sm);
+  transition: transform 0.18s var(--ease);
+}
+
+.switch input:checked + i {
+  background: var(--brand);
+}
+
+.switch input:checked + i::after {
+  transform: translateX(18px);
+}
+
+.switch input:focus-visible + i {
+  box-shadow: var(--neo-in), 0 0 0 3px var(--brand-soft);
+}
+
+.plan-price {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin: -8px 0 18px;
+}
+
+.usage-row {
+  margin-bottom: 14px;
+}
+
+.usage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-row .util-bar-lg {
+  height: 8px;
+}

@@ -7,6 +7,16 @@ import Overview from "./dashboard/Overview";
 import Fleet from "./dashboard/Fleet";
 import AddVehicle from "./dashboard/AddVehicle";
 import VehicleDetails from "./dashboard/VehicleDetails";
+import Bookings from "./dashboard/Bookings";
+import NewBooking from "./dashboard/NewBooking";
+import BookingDetails from "./dashboard/BookingDetails";
+import Clients from "./dashboard/Clients";
+import ClientDetails from "./dashboard/ClientDetails";
+import Verification from "./dashboard/Verification";
+import Payments from "./dashboard/Payments";
+import Staff from "./dashboard/Staff";
+import Notifications from "./dashboard/Notifications";
+import Settings from "./dashboard/Settings";
 import Placeholder from "./dashboard/Placeholder";
 
 export default function App() {
@@ -20,6 +30,16 @@ export default function App() {
         <Route path="fleet" element={<Fleet />} />
         <Route path="fleet/new" element={<AddVehicle />} />
         <Route path="fleet/:plate" element={<VehicleDetails />} />
+        <Route path="bookings" element={<Bookings />} />
+        <Route path="bookings/new" element={<NewBooking />} />
+        <Route path="bookings/:ref" element={<BookingDetails />} />
+        <Route path="clients" element={<Clients />} />
+        <Route path="clients/:id" element={<ClientDetails />} />
+        <Route path="verification" element={<Verification />} />
+        <Route path="payments" element={<Payments />} />
+        <Route path="staff" element={<Staff />} />
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="settings" element={<Settings />} />
         <Route path=":section" element={<Placeholder />} />
       </Route>
     </Routes>

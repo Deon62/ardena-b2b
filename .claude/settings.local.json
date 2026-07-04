@@ -20,7 +20,8 @@
       "Bash(node trace.js)",
       "Skill(dataviz)",
       "Bash(node scripts/validate_palette.js \"#0060c4,#1a80ec,#539df4,#8fbdf7,#c2dbfa\" --ordinal --surface \"#eef1f6\" --mode light)",
-      "Bash(node scripts/validate_palette.js \"#007ffa\" --surface \"#eef1f6\" --mode light)"
+      "Bash(node scripts/validate_palette.js \"#007ffa\" --surface \"#eef1f6\" --mode light)",
+      "PowerShell(npm run *)"
     ]
   }
 }
