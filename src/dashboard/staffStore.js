@@ -1,7 +1,5 @@
 // In-memory staff store (mock backend), same pattern as the other stores.
-// Growth plan includes 10 staff seats.
-
-export const SEATS = 10;
+// Seats are unlimited on the Fleet plan.
 
 export const ROLES = ["Manager", "Booking agent", "Finance", "Viewer"];
 

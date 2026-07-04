@@ -1,13 +1,13 @@
 import { useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
-import { subscribe as subscribeStaff, getStaff, SEATS } from "./staffStore";
+import { CHECK_PRICE } from "./verificationsStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./workspace.css";
 
-// Growth plan limits (mock — real limits come with the billing engine)
-const PLAN = { vehicles: 50, verifications: 50, verificationsUsed: 5 };
+// Per-vehicle pricing (mock — real numbers come with the billing engine)
+const PLAN = { launchRate: 200, minimum: 2000 };
 
 const PREFS = [
   { key: "bookings", name: "Booking activity", desc: "New requests, confirmations and cancellations" },
@@ -19,7 +19,6 @@ const PREFS = [
 
 export default function Settings() {
   const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
-  const staff = useSyncExternalStore(subscribeStaff, getStaff);
   const [saved, setSaved] = useState(false);
   const [prefs, setPrefs] = useState({
     bookings: true,
@@ -29,11 +28,7 @@ export default function Settings() {
     staff: false,
   });
 
-  const usage = [
-    { label: "Vehicles", used: vehicles.length, cap: PLAN.vehicles },
-    { label: "Staff seats", used: staff.length, cap: SEATS },
-    { label: "Verifications this month", used: PLAN.verificationsUsed, cap: PLAN.verifications },
-  ];
+  const monthly = Math.max(PLAN.minimum, vehicles.length * PLAN.launchRate);
 
   function handleSave(e) {
     e.preventDefault();
@@ -115,23 +110,26 @@ export default function Settings() {
           <section className="panel-card">
             <header className="card-head">
               <h2>Plan &amp; billing</h2>
-              <p>Renews 1 Aug 2026 · billed via M-Pesa</p>
+              <p>Renews 1 Aug 2026 · billed via Paystack</p>
             </header>
-            <p className="util-hero">Growth</p>
-            <p className="plan-price">KES 9,500 / month</p>
-            {usage.map((u) => (
-              <div className="usage-row" key={u.label}>
-                <div className="usage-head">
-                  <span>{u.label}</span>
-                  <span>
-                    {u.used} / {u.cap}
-                  </span>
-                </div>
-                <span className="util-bar util-bar-lg">
-                  <i style={{ width: `${Math.min(100, (u.used / u.cap) * 100)}%` }} />
-                </span>
-              </div>
-            ))}
+            <p className="util-hero">Fleet plan</p>
+            <p className="plan-price">
+              KES {PLAN.launchRate} / vehicle / month · launch price
+            </p>
+            <div className="pay-row">
+              <span>Vehicles billed</span>
+              <span className="mini-amount">
+                {vehicles.length} · KES {monthly.toLocaleString("en-KE")}/mo
+              </span>
+            </div>
+            <div className="pay-row">
+              <span>Bookings, staff &amp; prompts</span>
+              <span className="mini-amount">Included</span>
+            </div>
+            <div className="pay-row">
+              <span>Renter checks</span>
+              <span className="mini-amount">KES {CHECK_PRICE} · pay as you go</span>
+            </div>
             <Link to="/dashboard/billing" className="btn btn-ghost pay-btn">
               Manage plan &amp; billing
             </Link>

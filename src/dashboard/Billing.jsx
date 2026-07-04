@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
-import { subscribe as subscribeStaff, getStaff, SEATS } from "./staffStore";
+import { CHECK_PRICE, WALLET_BALANCE } from "./verificationsStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./workspace.css";
@@ -8,64 +8,68 @@ import "./billing.css";
 
 // Swap these slugs for the live Paystack payment links
 const PAYSTACK = {
-  payInvoice: "https://paystack.com/pay/ardena-growth-monthly",
+  payInvoice: "https://paystack.com/pay/ardena-fleet-monthly",
+  topUpWallet: "https://paystack.com/pay/ardena-check-topup",
   updateCard: "https://paystack.com/pay/ardena-update-card",
-  upgrade: "https://paystack.com/pay/ardena-scale-monthly",
 };
 
-// Growth plan limits (mock — real numbers come with the billing engine)
+// Per-vehicle pricing (mock — real numbers come with the billing engine)
 const PLAN = {
-  name: "Growth",
-  price: 9500,
-  vehicles: 50,
-  verifications: 50,
-  verificationsUsed: 5,
-  prompts: 500,
-  promptsUsed: 112,
+  rate: 400, // KES / vehicle / month, standard
+  launchRate: 200, // first 3 months
+  launchMonthsLeft: 1,
+  minimum: 2000, // KES / month floor
 };
+
+const CHECKS_USED = 5; // this cycle, from the verification log
 
 const INVOICES = [
-  { ref: "INV-2026-007", period: "July 2026", issued: "1 Jul 2026", amount: 9500, status: "Due" },
-  { ref: "INV-2026-006", period: "June 2026", issued: "1 Jun 2026", amount: 9500, status: "Paid" },
-  { ref: "INV-2026-005", period: "May 2026", issued: "1 May 2026", amount: 9500, status: "Paid" },
-  { ref: "INV-2026-004", period: "April 2026", issued: "1 Apr 2026", amount: 9500, status: "Paid" },
-  { ref: "INV-2026-003", period: "March 2026", issued: "1 Mar 2026", amount: 7000, status: "Paid" },
+  { ref: "INV-2026-007", detail: "July · 12 vehicles × KES 200", issued: "1 Jul 2026", amount: 2400, status: "Due" },
+  { ref: "TOP-2026-043", detail: "Verification top-up · 15 checks", issued: "28 Jun 2026", amount: 1500, status: "Paid" },
+  { ref: "INV-2026-006", detail: "June · 12 vehicles × KES 200", issued: "1 Jun 2026", amount: 2400, status: "Paid" },
+  { ref: "INV-2026-005", detail: "May · 11 vehicles × KES 200", issued: "1 May 2026", amount: 2200, status: "Paid" },
+  { ref: "INV-2026-004", detail: "April · monthly minimum", issued: "1 Apr 2026", amount: 2000, status: "Paid" },
 ];
 
 const fmtAmount = (n) => n.toLocaleString("en-KE");
 
 export default function Billing() {
   const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
-  const staff = useSyncExternalStore(subscribeStaff, getStaff);
+
+  const monthly = Math.max(PLAN.minimum, vehicles.length * PLAN.launchRate);
+  const standardMonthly = Math.max(PLAN.minimum, vehicles.length * PLAN.rate);
+  const due = INVOICES.find((i) => i.status === "Due");
 
   const usage = [
-    { label: "Vehicles", used: vehicles.length, cap: PLAN.vehicles },
-    { label: "Staff seats", used: staff.length, cap: SEATS },
-    { label: "ID verifications", used: PLAN.verificationsUsed, cap: PLAN.verifications },
-    { label: "M-Pesa prompts", used: PLAN.promptsUsed, cap: PLAN.prompts },
+    { label: `Vehicles on plan × KES ${PLAN.launchRate}`, value: vehicles.length, amount: `KES ${fmtAmount(monthly)}` },
+    { label: "Renter checks used", value: CHECKS_USED, amount: `KES ${fmtAmount(CHECKS_USED * CHECK_PRICE)} from wallet` },
+    { label: "M-Pesa prompts sent", value: 112, amount: "Included" },
+    { label: "Staff seats", value: 6, amount: "Included" },
   ];
-
-  const due = INVOICES.find((i) => i.status === "Due");
 
   return (
     <>
       <div className="stat-grid fleet-stats">
         <article className="stat-card">
-          <p className="stat-label">Current plan</p>
-          <p className="stat-value">{PLAN.name}</p>
-          <p className="stat-note">KES {fmtAmount(PLAN.price)} / month</p>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">Balance due</p>
-          <p className="stat-value">KES {fmtAmount(due ? due.amount : 0)}</p>
-          <p className="stat-note">{due ? `${due.ref} · due 15 Jul 2026` : "all invoices settled"}</p>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">Seats used</p>
-          <p className="stat-value">
-            {staff.length} of {SEATS}
+          <p className="stat-label">Rate per vehicle</p>
+          <p className="stat-value">KES {PLAN.launchRate}</p>
+          <p className="stat-note">
+            launch price · {PLAN.launchMonthsLeft} month left, then KES {PLAN.rate}
           </p>
-          <p className="stat-note">on the {PLAN.name} plan</p>
+        </article>
+        <article className="stat-card">
+          <p className="stat-label">This month</p>
+          <p className="stat-value">KES {fmtAmount(monthly)}</p>
+          <p className="stat-note">
+            {vehicles.length} vehicles · due 15 Jul 2026
+          </p>
+        </article>
+        <article className="stat-card">
+          <p className="stat-label">Check wallet</p>
+          <p className="stat-value">KES {fmtAmount(WALLET_BALANCE)}</p>
+          <p className="stat-note">
+            ≈ {Math.floor(WALLET_BALANCE / CHECK_PRICE)} renter checks left
+          </p>
         </article>
         <article className="stat-card">
           <p className="stat-label">Next renewal</p>
@@ -79,32 +83,32 @@ export default function Billing() {
           <section className="panel-card">
             <header className="card-head">
               <h2>Usage this cycle</h2>
-              <p>1 – 31 July 2026 · what you've used of the {PLAN.name} plan</p>
+              <p>1 – 31 July 2026 · what July's bill is made of</p>
             </header>
             {usage.map((u) => (
-              <div className="usage-row" key={u.label}>
-                <div className="usage-head">
-                  <span>{u.label}</span>
-                  <span>
-                    {u.used} / {u.cap}
-                  </span>
-                </div>
-                <span className="util-bar util-bar-lg">
-                  <i style={{ width: `${Math.min(100, (u.used / u.cap) * 100)}%` }} />
+              <div className="pay-row" key={u.label}>
+                <span>
+                  {u.label} — <strong>{u.value}</strong>
                 </span>
+                <span className="mini-amount">{u.amount}</span>
               </div>
             ))}
+            <p className="side-hint">
+              Bookings, staff seats and M-Pesa prompts are unlimited on the
+              Fleet plan. You only ever pay per vehicle, plus KES {CHECK_PRICE}{" "}
+              per renter check.
+            </p>
           </section>
 
           <section className="panel-card">
             <header className="card-head">
-              <h2>Invoices</h2>
+              <h2>Invoices &amp; top-ups</h2>
               <p>Your billing history on Ardena</p>
             </header>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Invoice</th>
+                  <th>Item</th>
                   <th>Issued</th>
                   <th className="num">Amount (KES)</th>
                   <th>Status</th>
@@ -116,7 +120,7 @@ export default function Billing() {
                   <tr key={inv.ref}>
                     <td>
                       <p className="strong">{inv.ref}</p>
-                      <p className="cell-sub">{inv.period}</p>
+                      <p className="cell-sub">{inv.detail}</p>
                     </td>
                     <td>{inv.issued}</td>
                     <td className="num">{fmtAmount(inv.amount)}</td>
@@ -176,12 +180,35 @@ export default function Billing() {
 
           <section className="panel-card">
             <header className="card-head">
+              <h2>Check wallet</h2>
+              <p>Prepaid renter verifications</p>
+            </header>
+            <p className="util-hero">KES {fmtAmount(WALLET_BALANCE)}</p>
+            <p className="invoice-sub">
+              ≈ {Math.floor(WALLET_BALANCE / CHECK_PRICE)} checks at KES {CHECK_PRICE} each
+            </p>
+            <a
+              className="btn btn-ghost pay-btn"
+              href={PAYSTACK.topUpWallet}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Top up wallet
+            </a>
+            <p className="paystack-note">
+              Top up like airtime — via M-Pesa or card. Credits never expire,
+              and every check (ID + selfie + licence) draws KES {CHECK_PRICE}.
+            </p>
+          </section>
+
+          <section className="panel-card">
+            <header className="card-head">
               <h2>Billing details</h2>
               <p>Card and plan on file</p>
             </header>
             <div className="pay-row">
               <span>Plan</span>
-              <span className="mini-amount">{PLAN.name}</span>
+              <span className="mini-amount">Fleet · per vehicle</span>
             </div>
             <div className="pay-row">
               <span>Card</span>
@@ -195,13 +222,11 @@ export default function Billing() {
               <a className="btn btn-ghost" href={PAYSTACK.updateCard} target="_blank" rel="noreferrer">
                 Update card
               </a>
-              <a className="btn btn-ghost" href={PAYSTACK.upgrade} target="_blank" rel="noreferrer">
-                Upgrade to Scale — KES 18,000/mo
-              </a>
             </div>
             <p className="side-hint">
-              Card changes and upgrades are handled on secure Paystack pages —
-              we never see your card number.
+              Your launch price of KES {PLAN.launchRate}/vehicle ends 1 Sep 2026
+              — from then it's KES {PLAN.rate}/vehicle (KES {fmtAmount(standardMonthly)}
+              /month at your current fleet size).
             </p>
           </section>
         </div>

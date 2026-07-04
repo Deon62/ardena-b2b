@@ -2,7 +2,13 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { fmtDate } from "./bookingsStore";
-import { SESSIONS, STATUS_CHIP, QUOTA, WIDGET_URL } from "./verificationsStore";
+import {
+  SESSIONS,
+  STATUS_CHIP,
+  CHECK_PRICE,
+  WALLET_BALANCE,
+  WIDGET_URL,
+} from "./verificationsStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./verification.css";
@@ -34,7 +40,6 @@ export default function Verification() {
       thisMonth,
       inProgress,
       conversion: Math.round((verified / SESSIONS.length) * 100),
-      remaining: QUOTA - thisMonth,
       counts,
       reasons: Object.entries(reasons).sort((a, b) => b[1] - a[1]),
     };
@@ -53,9 +58,21 @@ export default function Verification() {
     <>
       <div className="stat-grid fleet-stats">
         <article className="stat-card">
-          <p className="stat-label">Sessions this month</p>
+          <p className="stat-label">Checks this month</p>
           <p className="stat-value">{stats.thisMonth}</p>
-          <p className="stat-note">of {QUOTA} on the Growth plan</p>
+          <p className="stat-note">
+            KES {(stats.thisMonth * CHECK_PRICE).toLocaleString("en-KE")} from your wallet
+          </p>
+        </article>
+        <article className="stat-card">
+          <p className="stat-label">Wallet balance</p>
+          <p className="stat-value">KES {WALLET_BALANCE.toLocaleString("en-KE")}</p>
+          <p className="stat-note">
+            ≈ {Math.floor(WALLET_BALANCE / CHECK_PRICE)} checks ·{" "}
+            <Link className="spec-link" to="/dashboard/billing">
+              top up
+            </Link>
+          </p>
         </article>
         <article className="stat-card">
           <p className="stat-label">Conversion</p>
@@ -66,11 +83,6 @@ export default function Verification() {
           <p className="stat-label">In progress</p>
           <p className="stat-value">{stats.inProgress}</p>
           <p className="stat-note">renters mid-verification</p>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">Quota remaining</p>
-          <p className="stat-value">{stats.remaining}</p>
-          <p className="stat-note">resets 1 Aug 2026</p>
         </article>
       </div>
 

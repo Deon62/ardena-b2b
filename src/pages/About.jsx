@@ -19,27 +19,36 @@ const VALUES = [
 ];
 
 const STATS = [
-  { value: "2026", label: "founded in Nairobi" },
-  { value: "8", label: "modules in one subscription" },
-  { value: "14 days", label: "free on every plan" },
+  { value: "Nakuru", label: "where we started" },
+  { value: "17 Mar 2026", label: "incorporated" },
+  { value: "8", label: "modules in one plan" },
 ];
 
 export default function About() {
   return (
-    <div className="landing site-page">
+    <div className="landing about-page">
       <SiteNav />
 
-      <section className="panel">
-        <div className="page-body">
-          <div className="page-intro">
-            <h1>
-              The operating system for
-              <br />
-              rental businesses.
-            </h1>
-          </div>
+      {/* ---- Hero: small header + description alone (white, full viewport) ---- */}
+      <section className="panel about-hero">
+        <div className="about-hero-body">
+          <h1>About Ardena.</h1>
+          <p>
+            This dashboard is the business side of{" "}
+            <a href="https://ardena.co.ke" target="_blank" rel="noreferrer">
+              ardena.co.ke
+            </a>{" "}
+            — built by Ardena Platforms Africa Ltd, incorporated on 17 March
+            2026 and started in Nakuru, Kenya.
+          </p>
+        </div>
+      </section>
 
-          <div className="prose">
+      {/* ---- Story (black, full viewport) ---- */}
+      <section className="panel modules about-story">
+        <div className="story-body">
+          <h2>Why we exist.</h2>
+          <div className="prose prose-dark">
             <p>
               Most car rental businesses in Kenya run on WhatsApp threads,
               paper logbooks and a spreadsheet someone updates at midnight.
@@ -47,11 +56,12 @@ export default function About() {
               stranger rests on a photocopy of an ID.
             </p>
             <p>
-              Ardena started in Nairobi in 2026 to change that. We put the
-              whole operation — fleet, bookings, verified customers, M-Pesa
-              payments, staff and reporting — into one system a rental team
-              can learn in an afternoon, billed as a single monthly
-              subscription with no heavy setup.
+              Ardena began at ardena.co.ke, where renters find quality cars.
+              Ardena Platforms Africa Ltd — incorporated on 17 March 2026 and
+              born in Nakuru — built this dashboard as the business extension
+              of that platform: fleet, bookings, verified customers, M-Pesa
+              payments, staff and reporting in one system, billed per vehicle
+              with no heavy setup.
             </p>
             <p>
               Today we're building for owners who take rentals seriously: the
@@ -71,8 +81,8 @@ export default function About() {
         </div>
       </section>
 
-      {/* ---- Values (black) ---- */}
-      <section className="panel modules about-values">
+      {/* ---- Values + CTA (white, full viewport) ---- */}
+      <section className="panel about-values">
         <div className="section-head">
           <h2>What we optimise for.</h2>
         </div>
@@ -85,21 +95,13 @@ export default function About() {
             </article>
           ))}
         </div>
-      </section>
-
-      {/* ---- CTA (white) ---- */}
-      <section className="panel closing about-closing">
-        <div className="closing-body">
-          <h2>See it with your own fleet.</h2>
-          <p>Start with a demo, or set up your vehicles in minutes.</p>
-          <div className="hero-cta">
-            <Link to="/signup" className="btn btn-primary">
-              Get started
-            </Link>
-            <Link to="/contact" className="btn btn-ghost">
-              Talk to us
-            </Link>
-          </div>
+        <div className="hero-cta about-cta">
+          <Link to="/signup" className="btn btn-primary">
+            Get started
+          </Link>
+          <Link to="/contact" className="btn btn-ghost">
+            Talk to us
+          </Link>
         </div>
       </section>
 

@@ -5,7 +5,6 @@ import {
   findByEmail,
   inviteStaff,
   removeStaff,
-  SEATS,
   ROLES,
   ROLE_NOTES,
 } from "./staffStore";
@@ -21,7 +20,6 @@ export default function Staff() {
 
   const active = staff.filter((s) => s.status === "Active").length;
   const pending = staff.length - active;
-  const seatsLeft = SEATS - staff.length;
 
   function handleInvite(e) {
     e.preventDefault();
@@ -31,11 +29,6 @@ export default function Staff() {
 
     if (findByEmail(email)) {
       setError(`${email} is already on the team.`);
-      setInvited("");
-      return;
-    }
-    if (seatsLeft <= 0) {
-      setError("You've used all your seats. Upgrade the plan to invite more.");
       setInvited("");
       return;
     }
@@ -64,9 +57,9 @@ export default function Staff() {
           <p className="stat-note">waiting to accept</p>
         </article>
         <article className="stat-card">
-          <p className="stat-label">Seats remaining</p>
-          <p className="stat-value">{seatsLeft}</p>
-          <p className="stat-note">of {SEATS} on Growth</p>
+          <p className="stat-label">Seats</p>
+          <p className="stat-value">Unlimited</p>
+          <p className="stat-note">included on the Fleet plan</p>
         </article>
       </div>
 

@@ -94,7 +94,7 @@ export default function DashboardLayout() {
             <span className="tenant-avatar">A</span>
             <div>
               <p className="tenant-name">Acme Car Hire</p>
-              <p className="tenant-plan">Growth plan</p>
+              <p className="tenant-plan">Fleet plan</p>
             </div>
             <svg className="tenant-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 15l6-6 6 6" />

@@ -3,7 +3,9 @@
 // selfie + liveness, then driver's licence. Statuses mirror the Dojah
 // dashboard: Verified (successful), Failed, In progress, Abandoned.
 
-export const QUOTA = 50; // Growth plan sessions per month
+// Pay-as-you-go: flat price per renter check, drawn from a prepaid wallet
+export const CHECK_PRICE = 100; // KES
+export const WALLET_BALANCE = 1500; // KES, mock until billing is wired in
 
 // Swap for the live widget link from the Dojah dashboard (EasyOnboard → share)
 export const WIDGET_URL = "https://identity.dojah.io/?widget_id=ardena-renter-kyc";

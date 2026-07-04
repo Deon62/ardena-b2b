@@ -49,39 +49,24 @@ const MODULES = [
   },
 ];
 
-/* Placeholder pricing until real KES figures are decided (BUILD_PLAN §12) */
-const PLANS = [
-  {
-    name: "Starter",
-    price: "KES 4,900",
-    period: "per month",
-    features: ["Up to 10 vehicles", "3 staff seats", "50 verifications / month", "M-Pesa payment prompting"],
-    featured: false,
-  },
-  {
-    name: "Growth",
-    price: "KES 12,900",
-    period: "per month",
-    features: ["Up to 50 vehicles", "10 staff seats", "250 verifications / month", "Priority support"],
-    featured: true,
-  },
-  {
-    name: "Scale",
-    price: "Custom",
-    period: "talk to us",
-    features: ["Unlimited vehicles", "Unlimited staff seats", "Pay as you go verifications", "Dedicated onboarding"],
-    featured: false,
-  },
-];
+/* Per-vehicle pricing: launch rate for the first 3 months, standard after.
+   Verification is pay as you go. */
+const RATE = 400;
+const LAUNCH_RATE = 200;
+const MINIMUM = 2000;
+const CHECK_PRICE = 100;
+
+const monthlyFor = (vehicles, rate) => Math.max(MINIMUM, vehicles * rate);
+const fmtKES = (n) => n.toLocaleString("en-KE");
 
 const FAQS = [
   {
     q: "How does billing work?",
-    a: "One monthly subscription per business. Pick a plan, pay by card or M-Pesa, and cancel anytime. Every plan starts with a 14 day free trial.",
+    a: "You pay per vehicle on the platform — KES 400 a month each, and just KES 200 during your first 3 months, with every module included. Pay by card or M-Pesa, cancel anytime, and every account starts with a 14 day free trial.",
   },
   {
     q: "Do I need my own identity verification account?",
-    a: "No. Verification is built into the platform. Your team verifies renters directly from a booking and each plan includes a monthly allowance.",
+    a: "No. Verification is built into the platform and pay as you go — a flat KES 100 per renter check, paid from a prepaid wallet you top up like airtime. No monthly commitment.",
   },
   {
     q: "How do customers pay?",
@@ -103,6 +88,7 @@ const FAQS = [
 
 export default function Landing() {
   const [openFaq, setOpenFaq] = useState(null);
+  const [fleetSize, setFleetSize] = useState(12);
 
   return (
     <div className="landing">
@@ -164,33 +150,64 @@ export default function Landing() {
       {/* ---- Pricing (white) ---- */}
       <section className="panel pricing" id="pricing">
         <Reveal className="section-head">
-          <h2>Simple monthly pricing.</h2>
-          <p className="section-sub">Start free for 14 days. No card required.</p>
+          <h2>Pay per vehicle. Nothing else.</h2>
+          <p className="section-sub">
+            Every module included. KES {LAUNCH_RATE} per vehicle for your first
+            3 months, KES {RATE} after. 14 day free trial, no card required.
+          </p>
         </Reveal>
-        <Reveal className="plan-grid">
-          {PLANS.map((p) => (
-            <article
-              className={"plan-card" + (p.featured ? " featured" : "")}
-              key={p.name}
-            >
-              {p.featured && <span className="plan-tag">Most popular</span>}
-              <h3>{p.name}</h3>
-              <p className="plan-price">
-                {p.price} <span>{p.period}</span>
+        <Reveal className="plan-grid price-grid">
+          <article className="plan-card featured">
+            <span className="plan-tag">Launch price</span>
+            <h3>Fleet plan</h3>
+            <div className="calc">
+              <div className="calc-head">
+                <label htmlFor="fleet-size">How many vehicles do you run?</label>
+                <strong>{fleetSize}</strong>
+              </div>
+              <input
+                id="fleet-size"
+                type="range"
+                min="3"
+                max="100"
+                value={fleetSize}
+                onChange={(e) => setFleetSize(Number(e.target.value))}
+              />
+              <p className="calc-price">
+                KES {fmtKES(monthlyFor(fleetSize, LAUNCH_RATE))}
+                <span> /month for your first 3 months</span>
               </p>
-              <ul>
-                {p.features.map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-              <Link
-                to="/signup"
-                className={"btn " + (p.featured ? "btn-primary inverse" : "btn-ghost")}
-              >
-                Get started
-              </Link>
-            </article>
-          ))}
+              <p className="calc-after">
+                then KES {fmtKES(monthlyFor(fleetSize, RATE))} /month · cancel
+                anytime
+              </p>
+            </div>
+            <ul>
+              <li>Unlimited bookings &amp; staff seats</li>
+              <li>M-Pesa payment prompting included</li>
+              <li>Fleet, clients, notifications &amp; reports</li>
+              <li>KES {fmtKES(MINIMUM)} monthly minimum</li>
+            </ul>
+            <Link to="/signup" className="btn btn-primary inverse">
+              Start free trial
+            </Link>
+          </article>
+
+          <article className="plan-card">
+            <h3>Renter verification</h3>
+            <p className="plan-price">
+              KES {CHECK_PRICE} <span>per check · pay as you go</span>
+            </p>
+            <ul>
+              <li>ID lookup, selfie &amp; licence in one check</li>
+              <li>Top up like airtime, via M-Pesa or card</li>
+              <li>Credits never expire</li>
+              <li>No monthly commitment</li>
+            </ul>
+            <Link to="/signup" className="btn btn-ghost">
+              Get started
+            </Link>
+          </article>
         </Reveal>
       </section>
 
