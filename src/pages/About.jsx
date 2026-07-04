@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import SiteNav from "../components/SiteNav";
 import SiteFooter from "../components/SiteFooter";
+import usePageTitle from "../hooks/usePageTitle";
 import "./landing.css";
 
 const VALUES = [
@@ -25,6 +26,7 @@ const STATS = [
 ];
 
 export default function About() {
+  usePageTitle("About");
   return (
     <div className="landing about-page">
       <SiteNav />

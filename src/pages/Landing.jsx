@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import useReveal from "../hooks/useReveal";
+import usePageTitle from "../hooks/usePageTitle";
 import SiteNav from "../components/SiteNav";
 import SiteFooter from "../components/SiteFooter";
 import "./landing.css";
@@ -87,6 +88,7 @@ const FAQS = [
 ];
 
 export default function Landing() {
+  usePageTitle("");
   const [openFaq, setOpenFaq] = useState(null);
   const [fleetSize, setFleetSize] = useState(12);
 

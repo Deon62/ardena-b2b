@@ -1,6 +1,7 @@
 import { useState } from "react";
 import SiteNav from "../components/SiteNav";
 import SiteFooter from "../components/SiteFooter";
+import usePageTitle from "../hooks/usePageTitle";
 import "./landing.css";
 
 /* Swap URLs for the live profiles */
@@ -46,6 +47,7 @@ const SOCIALS = [
 ];
 
 export default function Contact() {
+  usePageTitle("Contact");
   const [sent, setSent] = useState(false);
 
   function handleSubmit(e) {

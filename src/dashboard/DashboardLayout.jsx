@@ -3,9 +3,11 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { NAV_SECTIONS } from "./nav";
 import { ICONS } from "./icons";
 import Logo from "../components/Logo";
+import usePageTitle from "../hooks/usePageTitle";
 import "./dashboard.css";
 
 export default function DashboardLayout() {
+  usePageTitle("Dashboard");
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const footRef = useRef(null);
