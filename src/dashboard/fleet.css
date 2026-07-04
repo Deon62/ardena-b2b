@@ -130,17 +130,14 @@
 
 .chip.available {
   color: #0b7a37;
-  background: rgba(22, 163, 74, 0.1);
 }
 
 .chip.booked {
   color: var(--brand-dark);
-  background: var(--brand-soft);
 }
 
 .chip.maintenance {
   color: #9a6700;
-  background: rgba(217, 119, 6, 0.12);
 }
 
 .fleet-empty {
@@ -197,21 +194,29 @@ a.icon-btn + .icon-btn {
   color: var(--ink);
 }
 
-/* ---- Back link ---- */
+/* ---- Back link: floating circular arrow ---- */
 
 .back-link {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink-mute);
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  color: var(--ink-soft);
+  background: var(--bg);
+  box-shadow: var(--neo-out-sm);
   margin-bottom: 18px;
-  transition: color 0.15s var(--ease);
+  transition: color 0.15s var(--ease), box-shadow 0.15s var(--ease);
 }
 
 .back-link:hover {
   color: var(--ink);
+  box-shadow: var(--neo-out);
+}
+
+.back-link:active {
+  box-shadow: var(--neo-in);
 }
 
 /* ---- Add vehicle form ---- */
@@ -259,6 +264,34 @@ a.icon-btn + .icon-btn {
   display: flex;
   gap: 12px;
   margin-top: 24px;
+}
+
+/* ---- Side actions card ---- */
+
+.action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-stack .btn {
+  width: 100%;
+  padding: 11px 18px;
+  font-size: 14px;
+}
+
+.action-done {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0b7a37;
+}
+
+.action-hint {
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  margin-top: 12px;
+  line-height: 1.5;
 }
 
 /* ---- Vehicle details ---- */

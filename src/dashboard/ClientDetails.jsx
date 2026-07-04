@@ -25,11 +25,10 @@ export default function ClientDetails() {
   if (!c) {
     return (
       <>
-        <Link to="/dashboard/clients" className="back-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <Link to="/dashboard/clients" className="back-link" aria-label="Back to clients">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          Clients
         </Link>
         <div className="empty-block fleet-empty">
           <p>This client doesn't exist.</p>
@@ -45,11 +44,10 @@ export default function ClientDetails() {
 
   return (
     <>
-      <Link to="/dashboard/clients" className="back-link">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <Link to="/dashboard/clients" className="back-link" aria-label="Back to clients">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
-        Clients
       </Link>
 
       <div className="page-head-row">

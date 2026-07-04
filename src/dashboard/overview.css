@@ -265,7 +265,6 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  padding: 3px 9px;
 }
 
 .chip::before {
@@ -278,17 +277,14 @@
 
 .chip.active {
   color: #0b7a37;
-  background: rgba(22, 163, 74, 0.1);
 }
 
 .chip.pending {
   color: #9a6700;
-  background: rgba(217, 119, 6, 0.12);
 }
 
 .chip.completed {
   color: var(--ink-soft);
-  background: var(--surface);
 }
 
 /* ---- Fleet status ---- */

@@ -4,12 +4,10 @@
 
 .chip.confirmed {
   color: var(--brand-dark);
-  background: var(--brand-soft);
 }
 
 .chip.cancelled {
   color: var(--danger);
-  background: rgba(220, 38, 38, 0.08);
 }
 
 /* ---- New booking: live total ---- */

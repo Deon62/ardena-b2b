@@ -27,11 +27,10 @@ export default function BookingDetails() {
   if (!b) {
     return (
       <>
-        <Link to="/dashboard/bookings" className="back-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <Link to="/dashboard/bookings" className="back-link" aria-label="Back to bookings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          Bookings
         </Link>
         <div className="empty-block fleet-empty">
           <p>This booking doesn't exist.</p>
@@ -48,11 +47,10 @@ export default function BookingDetails() {
 
   return (
     <>
-      <Link to="/dashboard/bookings" className="back-link">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <Link to="/dashboard/bookings" className="back-link" aria-label="Back to bookings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
-        Bookings
       </Link>
 
       <div className="page-head-row">

@@ -36,11 +36,10 @@ export default function PaymentsList() {
 
   return (
     <>
-      <Link className="back-link" to="/dashboard/payments">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5M11 18l-6-6 6-6" />
+      <Link className="back-link" to="/dashboard/payments" aria-label="Back to payments">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
-        Payments
       </Link>
 
       <div className="page-head">

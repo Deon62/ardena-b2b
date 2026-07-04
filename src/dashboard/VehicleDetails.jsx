@@ -31,11 +31,10 @@ export default function VehicleDetails() {
   if (!v) {
     return (
       <>
-        <Link to="/dashboard/fleet" className="back-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <Link to="/dashboard/fleet" className="back-link" aria-label="Back to fleet">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          Fleet
         </Link>
         <div className="empty-block fleet-empty">
           <p>This vehicle is no longer in your fleet.</p>
@@ -49,11 +48,10 @@ export default function VehicleDetails() {
 
   return (
     <>
-      <Link to="/dashboard/fleet" className="back-link">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <Link to="/dashboard/fleet" className="back-link" aria-label="Back to fleet">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
-        Fleet
       </Link>
 
       <div className="page-head-row">
