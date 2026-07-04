@@ -16,6 +16,7 @@ import Verification from "./dashboard/Verification";
 import Payments from "./dashboard/Payments";
 import PaymentsList from "./dashboard/PaymentsList";
 import Staff from "./dashboard/Staff";
+import Billing from "./dashboard/Billing";
 import Notifications from "./dashboard/Notifications";
 import Settings from "./dashboard/Settings";
 import Placeholder from "./dashboard/Placeholder";
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="payments" element={<Payments />} />
         <Route path="payments/all" element={<PaymentsList />} />
         <Route path="staff" element={<Staff />} />
+        <Route path="billing" element={<Billing />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />
         <Route path=":section" element={<Placeholder />} />

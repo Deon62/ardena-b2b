@@ -35,5 +35,4 @@ export const SECTION_TITLES = {
   staff: "Staff & roles",
   notifications: "Notifications",
   settings: "Settings",
-  billing: "Usage & billing",
 };

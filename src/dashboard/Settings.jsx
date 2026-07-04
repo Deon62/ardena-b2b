@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from "react";
+import { Link } from "react-router-dom";
 import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
 import { subscribe as subscribeStaff, getStaff, SEATS } from "./staffStore";
 import "./fleet.css";
@@ -131,9 +132,9 @@ export default function Settings() {
                 </span>
               </div>
             ))}
-            <button type="button" className="btn btn-ghost pay-btn" disabled title="Billing portal coming soon">
-              Manage plan — coming soon
-            </button>
+            <Link to="/dashboard/billing" className="btn btn-ghost pay-btn">
+              Manage plan &amp; billing
+            </Link>
           </section>
 
           <section className="panel-card">
