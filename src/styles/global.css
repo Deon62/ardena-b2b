@@ -16,7 +16,7 @@
 
   /* Neutrals. --bg is a soft near-white so neumorphic shadows read. */
   --bg: #eef1f6;
-  --panel: #f4f6fa; /* cards sit a touch lighter than the page */
+  --panel: #ffffff; /* cards sit white against the grey-blue page */
   --surface: #e7ebf2;
   --line: #dde2ea;
   --ink: #0a0d12;

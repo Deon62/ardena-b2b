@@ -123,7 +123,7 @@
 .heatmap-cell:hover,
 .heatmap-cell:focus-visible {
   transform: scale(1.12);
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--ink-mute);
+  box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--ink-mute);
 }
 
 .heatmap-scale {
@@ -187,7 +187,7 @@
 }
 
 .db-dot {
-  stroke: var(--bg); /* 2px surface ring */
+  stroke: var(--panel); /* 2px surface ring */
   stroke-width: 2;
 }
 
@@ -254,7 +254,7 @@
 
 .ut-dot {
   fill: var(--brand);
-  stroke: var(--bg); /* 2px surface ring */
+  stroke: var(--panel); /* 2px surface ring */
   stroke-width: 2;
 }
 
