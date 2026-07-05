@@ -10,6 +10,11 @@ import {
   subscribe as subscribeSupport,
   getState as getSupportState,
 } from "./supportStore";
+import {
+  subscribe as subscribeBusiness,
+  getBusiness,
+  businessInitial,
+} from "./businessStore";
 import Logo from "../components/Logo";
 import VerifiedBadge from "../components/VerifiedBadge";
 import usePageTitle from "../hooks/usePageTitle";
@@ -27,6 +32,7 @@ export default function DashboardLayout() {
   const notifications = useSyncExternalStore(subscribeNotifs, getNotifications);
   const unread = notifications.filter((n) => !n.read).length;
   const supportUnread = useSyncExternalStore(subscribeSupport, getSupportState).unread;
+  const business = useSyncExternalStore(subscribeBusiness, getBusiness);
 
   // brief skeleton on every route change, standing in for real data fetches
   const [pageLoading, setPageLoading] = useState(true);
@@ -122,12 +128,16 @@ export default function DashboardLayout() {
             aria-expanded={menuOpen}
           >
             <span className="tenant-avatar">
-              A
+              {business.logo ? (
+                <img src={business.logo} alt="" />
+              ) : (
+                businessInitial(business.name)
+              )}
               {supportUnread > 0 && <span className="tenant-dot" aria-label="New support message" />}
             </span>
             <div>
               <p className="tenant-name">
-                Acme Car Hire <VerifiedBadge compact />
+                {business.name} <VerifiedBadge compact />
               </p>
               <p className="tenant-plan">Fleet plan</p>
             </div>

@@ -1,8 +1,14 @@
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
 import { subscribe as subscribePolicy, getPolicy, setPolicy, RETURN_HOUR } from "./policyStore";
 import { CHECK_PRICE } from "./verificationsStore";
+import {
+  subscribe as subscribeBusiness,
+  getBusiness,
+  setBusiness,
+  businessInitial,
+} from "./businessStore";
 import VerifiedBadge from "../components/VerifiedBadge";
 import Dropdown from "../components/Dropdown";
 import { toast } from "./toastStore";
@@ -21,10 +27,39 @@ const PREFS = [
   { key: "staff", name: "Staff changes", desc: "Invites accepted and roles changed" },
 ];
 
+// draw the picked image onto a canvas capped at 256px so the data URL
+// stays small enough for localStorage
+function resizeImage(file, max = 256) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function Settings() {
   const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
   const policy = useSyncExternalStore(subscribePolicy, getPolicy);
+  const business = useSyncExternalStore(subscribeBusiness, getBusiness);
   const [currency, setCurrency] = useState("KES, Kenyan shilling");
+  const [logo, setLogo] = useState(business.logo);
+  const [name, setName] = useState(business.name);
+  const fileRef = useRef(null);
 
   function handlePolicySave(e) {
     e.preventDefault();
@@ -45,8 +80,24 @@ export default function Settings() {
 
   const monthly = Math.max(PLAN.minimum, vehicles.length * PLAN.launchRate);
 
+  async function handleLogoPick(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast("Please choose an image file.", "danger");
+      return;
+    }
+    try {
+      setLogo(await resizeImage(file));
+    } catch {
+      toast("Couldn't read that image.", "danger");
+    }
+    e.target.value = ""; // allow re-picking the same file
+  }
+
   function handleSave(e) {
     e.preventDefault();
+    setBusiness({ name: name.trim() || "Acme Car Hire", logo });
     toast("Business profile saved.");
   }
 
@@ -60,10 +111,55 @@ export default function Settings() {
               <p>Shown on customer-facing prompts and receipts</p>
             </header>
             <form onSubmit={handleSave}>
+              <div className="logo-uploader">
+                <span className="logo-avatar">
+                  {logo ? (
+                    <img src={logo} alt="Business logo" />
+                  ) : (
+                    <span className="logo-initial">{businessInitial(name)}</span>
+                  )}
+                </span>
+                <div className="logo-actions">
+                  <p className="logo-label">Business logo</p>
+                  <p className="logo-hint">Shown on your dashboard and trust page. Square works best.</p>
+                  <div className="logo-buttons">
+                    <button
+                      type="button"
+                      className="btn btn-ghost logo-btn"
+                      onClick={() => fileRef.current?.click()}
+                    >
+                      {logo ? "Change" : "Upload"}
+                    </button>
+                    {logo && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost logo-btn danger-btn"
+                        onClick={() => setLogo(null)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/*"
+                    className="logo-input"
+                    onChange={handleLogoPick}
+                  />
+                </div>
+              </div>
+
               <div className="form-grid">
                 <div className="field">
                   <label htmlFor="set-name">Business name</label>
-                  <input id="set-name" type="text" defaultValue="Acme Car Hire" required />
+                  <input
+                    id="set-name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="field">
                   <label htmlFor="set-phone">Business phone</label>

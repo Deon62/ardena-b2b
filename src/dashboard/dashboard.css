@@ -155,6 +155,7 @@
 .tenant-avatar {
   width: 32px;
   height: 32px;
+  border-radius: 50%;
   background: var(--ink);
   color: #fff;
   display: flex;
@@ -162,6 +163,14 @@
   justify-content: center;
   font-weight: 700;
   font-size: 14px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.tenant-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .tenant-name {
