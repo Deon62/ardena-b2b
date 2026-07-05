@@ -320,8 +320,22 @@ a.icon-btn + .icon-btn {
   transform: none;
 }
 
-.danger-btn {
-  color: var(--danger);
+/* Destructive buttons read clearly red (higher specificity than .btn-ghost) */
+.btn.danger-btn {
+  color: #fff;
+  background: var(--danger);
+  box-shadow: var(--neo-out-sm);
+}
+
+.btn.danger-btn:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: var(--neo-out);
+}
+
+.btn.danger-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .details-grid {

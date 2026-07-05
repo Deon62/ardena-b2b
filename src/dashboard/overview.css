@@ -23,6 +23,27 @@
   position: relative;
 }
 
+/* Chart cards stretch to their grid row so bases line up with side cards,
+   and the chart itself centres in whatever height it's given. */
+.chart-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card > .card-head {
+  flex: 0 0 auto;
+}
+
+.chart-card > .heatmap,
+.chart-card > .dumbbell,
+.chart-card > .ut-chart,
+.chart-card > .collections-chart {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .card-head {
   margin-bottom: 20px;
 }
@@ -48,7 +69,7 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .overview-side {

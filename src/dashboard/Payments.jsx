@@ -9,6 +9,7 @@ import {
 } from "./bookingsStore";
 import { PAY_CHIP } from "./Bookings";
 import CollectionsTrend from "./charts/CollectionsTrend";
+import mpesaLogo from "../assets/mpesa-logo.webp";
 import "./fleet.css";
 import "./bookings.css";
 import "./payments.css";
@@ -159,7 +160,10 @@ export default function Payments() {
                   </div>
                 </dl>
 
-                <button type="button" className="btn prompt-send" onClick={sendPrompt}>
+                <button type="button" className="btn mpesa-btn" onClick={sendPrompt}>
+                  <span className="mpesa-badge">
+                    <img src={mpesaLogo} alt="M-Pesa" />
+                  </span>
                   {selected.payment === "Prompt sent" ? "Resend prompt" : "Send prompt"}
                 </button>
 

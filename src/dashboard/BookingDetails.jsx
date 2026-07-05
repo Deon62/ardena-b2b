@@ -12,6 +12,7 @@ import {
   rentalDays,
 } from "./bookingsStore";
 import { STATUS_CHIP, PAY_CHIP } from "./Bookings";
+import mpesaLogo from "../assets/mpesa-logo.webp";
 import "./fleet.css";
 import "./bookings.css";
 
@@ -174,10 +175,13 @@ export default function BookingDetails() {
               <>
                 <button
                   type="button"
-                  className="btn btn-ghost pay-btn"
+                  className="btn mpesa-btn"
                   onClick={() => setPayment(b.ref, "Prompt sent")}
                 >
-                  {b.payment === "Prompt sent" ? "Resend M-Pesa prompt" : "Send M-Pesa prompt"}
+                  <span className="mpesa-badge">
+                    <img src={mpesaLogo} alt="M-Pesa" />
+                  </span>
+                  {b.payment === "Prompt sent" ? "Resend prompt" : "Send prompt"}
                 </button>
                 <p className="side-hint">
                   Sends an STK push to {b.phone}. Live payments arrive with the M-Pesa integration.
