@@ -47,6 +47,11 @@ export default function Fleet() {
     <>
       <div className="stat-grid fleet-stats">
         <article className="stat-card">
+          <p className="stat-label">Total fleet</p>
+          <p className="stat-value">{vehicles.length}</p>
+          <p className="stat-note">vehicles registered</p>
+        </article>
+        <article className="stat-card">
           <p className="stat-label">Available</p>
           <p className="stat-value">{counts.Available}</p>
           <p className="stat-note">ready to book</p>

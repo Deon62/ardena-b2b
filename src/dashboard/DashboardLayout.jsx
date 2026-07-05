@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { NAV_SECTIONS } from "./nav";
 import { ICONS } from "./icons";
+import {
+  subscribe as subscribeNotifs,
+  getNotifications,
+} from "./notificationsStore";
+import {
+  subscribe as subscribeSupport,
+  getState as getSupportState,
+} from "./supportStore";
 import Logo from "../components/Logo";
 import VerifiedBadge from "../components/VerifiedBadge";
 import usePageTitle from "../hooks/usePageTitle";
@@ -14,6 +22,10 @@ export default function DashboardLayout() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const footRef = useRef(null);
+
+  const notifications = useSyncExternalStore(subscribeNotifs, getNotifications);
+  const unread = notifications.filter((n) => !n.read).length;
+  const supportUnread = useSyncExternalStore(subscribeSupport, getSupportState).unread;
 
   // brief skeleton on every route change, standing in for real data fetches
   const [pageLoading, setPageLoading] = useState(true);
@@ -57,6 +69,9 @@ export default function DashboardLayout() {
                 >
                   {ICONS[item.key]}
                   {item.name}
+                  {item.key === "notifications" && unread > 0 && (
+                    <span className="nav-badge">{unread}</span>
+                  )}
                 </NavLink>
               ))}
             </div>
@@ -87,6 +102,7 @@ export default function DashboardLayout() {
                   <path d="M12 17.5h.01" />
                 </svg>
                 Support
+                {supportUnread > 0 && <span className="nav-badge">{supportUnread}</span>}
               </button>
               <button type="button" role="menuitem" onClick={() => go("/")}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -104,7 +120,10 @@ export default function DashboardLayout() {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
-            <span className="tenant-avatar">A</span>
+            <span className="tenant-avatar">
+              A
+              {supportUnread > 0 && <span className="tenant-dot" aria-label="New support message" />}
+            </span>
             <div>
               <p className="tenant-name">
                 Acme Car Hire <VerifiedBadge compact />

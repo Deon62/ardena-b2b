@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { subscribe, getState, sendMessage } from "./supportStore";
+import { subscribe, getState, sendMessage, markSupportRead } from "./supportStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./support.css";
@@ -42,10 +42,11 @@ export default function Support() {
   const [draft, setDraft] = useState("");
   const threadRef = useRef(null);
 
-  // keep the newest message in view
+  // keep the newest message in view, and mark everything as seen
   useEffect(() => {
     const el = threadRef.current;
     if (el) el.scrollTop = el.scrollHeight;
+    markSupportRead();
   }, [messages, replying]);
 
   function handleSend(e) {

@@ -15,6 +15,7 @@ let state = {
     },
   ],
   replying: false,
+  unread: 1, // the greeting hasn't been seen yet
 };
 
 let nextId = 2;
@@ -55,7 +56,9 @@ export function sendMessage(text) {
 
   setTimeout(() => {
     state = {
+      ...state,
       replying: false,
+      unread: state.unread + 1,
       messages: [
         ...state.messages,
         {
@@ -68,4 +71,11 @@ export function sendMessage(text) {
     };
     emit();
   }, 1400);
+}
+
+/* Called while the Support page is open, so replies never pile up unseen. */
+export function markSupportRead() {
+  if (state.unread === 0) return;
+  state = { ...state, unread: 0 };
+  emit();
 }

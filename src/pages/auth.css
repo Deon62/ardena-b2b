@@ -16,6 +16,12 @@
   right: 0;
   display: flex;
   justify-content: center;
+  /* full-width strip must not swallow clicks on the back button under it */
+  pointer-events: none;
+}
+
+.auth-nav .brand {
+  pointer-events: auto;
 }
 
 .auth-nav .brand svg {
@@ -98,7 +104,7 @@
 /* ---- Request access ---- */
 
 .auth-card.request-card {
-  max-width: 520px;
+  max-width: 640px;
 }
 
 .auth-row {

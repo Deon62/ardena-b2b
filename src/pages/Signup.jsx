@@ -63,13 +63,15 @@ export default function Signup() {
         </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="field">
-            <label htmlFor="r-business">Business name</label>
-            <input id="r-business" type="text" placeholder="Acme Car Hire Ltd" autoComplete="organization" required />
-          </div>
-          <div className="field">
-            <label htmlFor="r-reg">Business registration number</label>
-            <input id="r-reg" type="text" placeholder="PVT-ABC123XYZ" required />
+          <div className="auth-row">
+            <div className="field">
+              <label htmlFor="r-business">Business name</label>
+              <input id="r-business" type="text" placeholder="Acme Car Hire Ltd" autoComplete="organization" required />
+            </div>
+            <div className="field">
+              <label htmlFor="r-reg">Registration number</label>
+              <input id="r-reg" type="text" placeholder="PVT-ABC123XYZ" required />
+            </div>
           </div>
           <div className="auth-row">
             <div className="field">
@@ -85,18 +87,24 @@ export default function Signup() {
               <input id="r-town" type="text" placeholder="Nakuru" required />
             </div>
           </div>
-          <div className="field">
-            <label htmlFor="r-name">Your name</label>
-            <input id="r-name" type="text" placeholder="Wanjiku Kamau" autoComplete="name" required />
-          </div>
           <div className="auth-row">
+            <div className="field">
+              <label htmlFor="r-name">Your name</label>
+              <input id="r-name" type="text" placeholder="Wanjiku Kamau" autoComplete="name" required />
+            </div>
             <div className="field">
               <label htmlFor="r-email">Work email</label>
               <input id="r-email" type="email" placeholder="you@company.co.ke" autoComplete="email" required />
             </div>
+          </div>
+          <div className="auth-row">
             <div className="field">
               <label htmlFor="r-phone">Phone (WhatsApp)</label>
               <input id="r-phone" type="tel" placeholder="0700 000 000" autoComplete="tel" required />
+            </div>
+            <div className="field">
+              <label htmlFor="r-web">Website or Instagram · optional</label>
+              <input id="r-web" type="text" placeholder="acmecarhire.co.ke" />
             </div>
           </div>
           <button type="submit" className="btn btn-primary">

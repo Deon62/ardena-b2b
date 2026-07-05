@@ -18,10 +18,10 @@ const Line = ({ w, h = 12, className = "" }) => (
   <span className={`sk ${className}`} style={{ width: w, height: h }} />
 );
 
-function StatRow() {
+function StatRow({ count = 4 }) {
   return (
     <div className="stat-grid fleet-stats">
-      {[0, 1, 2, 3].map((i) => (
+      {Array.from({ length: count }, (_, i) => (
         <article className="stat-card" key={i}>
           <Line w="55%" h={11} />
           <Line w="70%" h={24} className="sk-gap" />
@@ -63,11 +63,14 @@ function HeadCard() {
 
 export default function PageSkeleton({ path }) {
   const variant = variantFor(path);
+  // KPI counts differ per page; the skeleton must match what loads in
+  const section = path.split("/").filter(Boolean)[1];
+  const statCount = section === "staff" ? 3 : 4;
 
   if (variant === "overview") {
     return (
       <div aria-hidden="true">
-        <StatRow />
+        <StatRow count={statCount} />
         <div className="chart-row">
           <section className="chart-card">
             <CardLines rows={0} />
@@ -120,7 +123,7 @@ export default function PageSkeleton({ path }) {
   if (variant === "grid") {
     return (
       <div aria-hidden="true">
-        <StatRow />
+        <StatRow count={statCount} />
         <div className="details-grid">
           <section className="panel-card">
             <CardLines rows={6} />
@@ -141,7 +144,7 @@ export default function PageSkeleton({ path }) {
   // table: stats + toolbar + rows
   return (
     <div aria-hidden="true">
-      <StatRow />
+      <StatRow count={statCount} />
       <section className="panel-card">
         <div className="sk-toolbar">
           <Line w={300} h={36} />
