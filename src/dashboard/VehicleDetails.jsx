@@ -63,8 +63,8 @@ export default function VehicleDetails() {
         </svg>
       </Link>
 
-      <div className="page-head-row">
-        <div className="page-head">
+      <header className="head-card">
+        <div className="head-titles">
           <h1>{v.name}</h1>
           <p>
             {v.plate} · {v.cat} ·{" "}
@@ -98,7 +98,7 @@ export default function VehicleDetails() {
             </button>
           )}
         </div>
-      </div>
+      </header>
 
       <div className="details-grid">
         <section className="panel-card">

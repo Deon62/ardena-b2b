@@ -103,8 +103,8 @@ export default function BookingDetails() {
         </svg>
       </Link>
 
-      <div className="page-head-row">
-        <div className="page-head">
+      <header className="head-card">
+        <div className="head-titles">
           <h1>{b.customer}</h1>
           <p>
             {b.ref} · {b.vehicle} ({b.plate}) ·{" "}
@@ -149,7 +149,7 @@ export default function BookingDetails() {
               </button>
             ))}
         </div>
-      </div>
+      </header>
 
       <div className="details-grid">
         <div className="settings-main">

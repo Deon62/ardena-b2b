@@ -50,8 +50,8 @@ export default function ClientDetails() {
         </svg>
       </Link>
 
-      <div className="page-head-row">
-        <div className="page-head">
+      <header className="head-card">
+        <div className="head-titles">
           <h1>{c.name}</h1>
           <p>
             {c.id} · {c.phone} ·{" "}
@@ -61,7 +61,7 @@ export default function ClientDetails() {
         <Link to="/dashboard/bookings/new" className="btn btn-primary">
           New booking
         </Link>
-      </div>
+      </header>
 
       <div className="details-grid">
         <section className="panel-card">
