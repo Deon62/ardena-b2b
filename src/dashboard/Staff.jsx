@@ -8,6 +8,8 @@ import {
   ROLES,
   ROLE_NOTES,
 } from "./staffStore";
+import Dropdown from "../components/Dropdown";
+import { toast } from "./toastStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./workspace.css";
@@ -16,7 +18,7 @@ export default function Staff() {
   const staff = useSyncExternalStore(subscribe, getStaff);
   const [confirming, setConfirming] = useState(null);
   const [error, setError] = useState("");
-  const [invited, setInvited] = useState("");
+  const [role, setRole] = useState("Booking agent");
 
   const active = staff.filter((s) => s.status === "Active").length;
   const pending = staff.length - active;
@@ -29,7 +31,7 @@ export default function Staff() {
 
     if (findByEmail(email)) {
       setError(`${email} is already on the team.`);
-      setInvited("");
+
       return;
     }
 
@@ -39,8 +41,9 @@ export default function Staff() {
       role: f.get("role"),
     });
     setError("");
-    setInvited(`Invite sent to ${email}.`);
+    toast(`Invite sent to ${email}.`);
     form.reset();
+    setRole("Booking agent");
   }
 
   return (
@@ -105,6 +108,7 @@ export default function Staff() {
                           onClick={() => {
                             removeStaff(s.id);
                             setConfirming(null);
+                            toast(`${s.name} removed from the team.`, "danger");
                           }}
                         >
                           Yes
@@ -146,14 +150,15 @@ export default function Staff() {
               </div>
               <div className="field">
                 <label htmlFor="s-role">Role</label>
-                <select id="s-role" name="role" defaultValue="Booking agent">
-                  {ROLES.map((r) => (
-                    <option key={r}>{r}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  id="s-role"
+                  name="role"
+                  value={role}
+                  onChange={setRole}
+                  options={ROLES}
+                />
               </div>
               {error && <p className="form-error">{error}</p>}
-              {invited && <p className="save-note">{invited}</p>}
               <button type="submit" className="btn btn-primary pay-btn">
                 Send invite
               </button>

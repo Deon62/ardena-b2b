@@ -9,6 +9,7 @@ import {
 } from "./bookingsStore";
 import { PAY_CHIP } from "./Bookings";
 import { fmtAmount, receiptFor } from "./Payments";
+import { toast } from "./toastStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./payments.css";
@@ -124,7 +125,10 @@ export default function PaymentsList() {
                       <button
                         type="button"
                         className="icon-btn prompt-green"
-                        onClick={() => setPayment(b.ref, "Prompt sent")}
+                        onClick={() => {
+                          setPayment(b.ref, "Prompt sent");
+                          toast(`M-Pesa prompt sent to ${b.customer}.`);
+                        }}
                       >
                         {b.payment === "Prompt sent" ? "Resend prompt" : "Send prompt"}
                       </button>

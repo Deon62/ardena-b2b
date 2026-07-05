@@ -12,6 +12,27 @@ import "./workspace.css";
 
 const FILTERS = ["All", "Unread", "Bookings", "Payments"];
 
+const KIND_LABEL = {
+  booking: "Booking",
+  payment: "Payment",
+  verification: "Verification",
+  fleet: "Fleet",
+  staff: "Staff",
+};
+
+/* "/dashboard/bookings/BK-2434" → "BK-2434", "/dashboard/verification" → page name */
+function relatedLabel(to) {
+  const seg = decodeURIComponent(to.split("/").filter(Boolean).pop());
+  const pages = {
+    verification: "Verification",
+    staff: "Staff & roles",
+    payments: "Payments",
+    bookings: "Bookings",
+    fleet: "Fleet",
+  };
+  return pages[seg] || seg;
+}
+
 const KIND_CLASS = {
   booking: "blue",
   payment: "green",
@@ -97,29 +118,62 @@ export default function Notifications() {
           </button>
         </div>
 
-        <ul className="notif-list">
-          {filtered.map((n) => (
-            <li key={n.id}>
-              <Link
-                className={`notif-item${n.read ? "" : " unread"}`}
-                to={n.to}
-                onClick={() => markRead(n.id)}
-              >
-                <span className={`notif-icon ${KIND_CLASS[n.kind]}`}>
-                  {KIND_ICON[n.kind]}
-                </span>
-                <span className="notif-body">
-                  <span className="notif-title">{n.title}</span>
-                  <span className="notif-meta">{n.meta}</span>
-                </span>
-                <span className="notif-time">
-                  {n.time}
-                  {!n.read && <i className="notif-dot" />}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Notification</th>
+              <th>Category</th>
+              <th>Related to</th>
+              <th>Received</th>
+              <th className="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((n) => (
+              <tr key={n.id} className={n.read ? "" : "unread-row"}>
+                <td>
+                  <div className="notif-cell">
+                    <span className={`notif-icon ${KIND_CLASS[n.kind]}`}>
+                      {KIND_ICON[n.kind]}
+                    </span>
+                    <div>
+                      <p className={n.read ? "" : "strong"}>
+                        {!n.read && <i className="notif-dot" aria-label="Unread" />}
+                        {n.title}
+                      </p>
+                      <p className="cell-sub">{n.meta}</p>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span className={`notif-kind ${KIND_CLASS[n.kind]}`}>
+                    {KIND_LABEL[n.kind]}
+                  </span>
+                </td>
+                <td>
+                  <Link className="spec-link" to={n.to} onClick={() => markRead(n.id)}>
+                    {relatedLabel(n.to)}
+                  </Link>
+                </td>
+                <td className="notif-when">{n.time}</td>
+                <td className="actions-cell">
+                  {!n.read && (
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={() => markRead(n.id)}
+                    >
+                      Mark read
+                    </button>
+                  )}
+                  <Link className="icon-btn" to={n.to} onClick={() => markRead(n.id)}>
+                    Open
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
         {filtered.length === 0 && (
           <div className="empty-block fleet-empty">

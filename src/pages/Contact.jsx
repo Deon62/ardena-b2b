@@ -1,6 +1,7 @@
 import { useState } from "react";
 import SiteNav from "../components/SiteNav";
 import SiteFooter from "../components/SiteFooter";
+import Dropdown from "../components/Dropdown";
 import usePageTitle from "../hooks/usePageTitle";
 import "./landing.css";
 
@@ -49,6 +50,7 @@ const SOCIALS = [
 export default function Contact() {
   usePageTitle("Contact");
   const [sent, setSent] = useState(false);
+  const [topic, setTopic] = useState("Sales & demos");
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -105,12 +107,12 @@ export default function Contact() {
             </div>
             <div className="field">
               <label htmlFor="c-topic">What's this about?</label>
-              <select id="c-topic" defaultValue="Sales & demos">
-                <option>Sales &amp; demos</option>
-                <option>Support</option>
-                <option>Partnerships</option>
-                <option>Something else</option>
-              </select>
+              <Dropdown
+                id="c-topic"
+                value={topic}
+                onChange={setTopic}
+                options={["Sales & demos", "Support", "Partnerships", "Something else"]}
+              />
             </div>
             <div className="field">
               <label htmlFor="c-message">Message</label>

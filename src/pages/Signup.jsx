@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "../components/Logo";
+import Dropdown from "../components/Dropdown";
 import usePageTitle from "../hooks/usePageTitle";
 import "./auth.css";
 
@@ -10,6 +11,7 @@ const FLEET_SIZES = ["3 – 10 vehicles", "11 – 30 vehicles", "31 – 100 vehi
 export default function Signup() {
   usePageTitle("Request access");
   const [sent, setSent] = useState(false);
+  const [fleetSize, setFleetSize] = useState(FLEET_SIZES[0]);
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -76,11 +78,12 @@ export default function Signup() {
           <div className="auth-row">
             <div className="field">
               <label htmlFor="r-fleet">Fleet size</label>
-              <select id="r-fleet" defaultValue={FLEET_SIZES[0]}>
-                {FLEET_SIZES.map((f) => (
-                  <option key={f}>{f}</option>
-                ))}
-              </select>
+              <Dropdown
+                id="r-fleet"
+                value={fleetSize}
+                onChange={setFleetSize}
+                options={FLEET_SIZES}
+              />
             </div>
             <div className="field">
               <label htmlFor="r-town">Town / county</label>

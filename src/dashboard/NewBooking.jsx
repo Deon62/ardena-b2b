@@ -17,6 +17,8 @@ import {
   getBlocked,
 } from "./availabilityStore";
 import DateRangePicker from "./DateRangePicker";
+import Dropdown from "../components/Dropdown";
+import { toast } from "./toastStore";
 import "./fleet.css";
 import "./bookings.css";
 
@@ -117,6 +119,7 @@ export default function NewBooking() {
       // per-booking deposit is optional; blank falls back to the policy default
       ...(deposit ? { depositAmount: Number(deposit) } : {}),
     });
+    toast(`Booking ${ref} created, pending confirmation.`);
     navigate(`/dashboard/bookings/${encodeURIComponent(ref)}`);
   }
 
@@ -148,22 +151,16 @@ export default function NewBooking() {
           </div>
           <div className="field form-full">
             <label htmlFor="b-vehicle">Vehicle</label>
-            <select
+            <Dropdown
               id="b-vehicle"
-              name="vehicle"
-              required
               value={plate}
-              onChange={(e) => setPlate(e.target.value)}
-            >
-              <option value="" disabled>
-                Choose a vehicle
-              </option>
-              {bookable.map((v) => (
-                <option key={v.plate} value={v.plate}>
-                  {v.name} · {v.plate}, KES {fmtAmount(v.rate)}/day
-                </option>
-              ))}
-            </select>
+              onChange={setPlate}
+              placeholder="Choose a vehicle"
+              options={bookable.map((v) => ({
+                value: v.plate,
+                label: `${v.name} · ${v.plate}, KES ${fmtAmount(v.rate)}/day`,
+              }))}
+            />
           </div>
           <div className="field form-full drp-field" ref={datesRef}>
             <label htmlFor="b-dates">Dates</label>

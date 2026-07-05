@@ -14,6 +14,7 @@ import Logo from "../components/Logo";
 import VerifiedBadge from "../components/VerifiedBadge";
 import usePageTitle from "../hooks/usePageTitle";
 import PageSkeleton from "./PageSkeleton";
+import Toasts from "./Toasts";
 import "./dashboard.css";
 
 export default function DashboardLayout() {
@@ -140,6 +141,8 @@ export default function DashboardLayout() {
       <main className="dash-content">
         {pageLoading ? <PageSkeleton path={location.pathname} /> : <Outlet />}
       </main>
+
+      <Toasts />
     </div>
   );
 }

@@ -9,6 +9,8 @@ import {
 } from "./fleetStore";
 import { getBookings } from "./bookingsStore";
 import { downloadVehicleStatement } from "./pdf";
+import Dropdown from "../components/Dropdown";
+import { toast } from "./toastStore";
 import "./fleet.css";
 
 const MONTHS = [
@@ -84,6 +86,7 @@ export default function VehicleDetails() {
                 className="icon-btn danger"
                 onClick={() => {
                   removeVehicle(v.plate);
+                  toast(`${v.name} (${v.plate}) removed from the fleet.`, "danger");
                   navigate("/dashboard/fleet");
                 }}
               >
@@ -188,17 +191,12 @@ export default function VehicleDetails() {
             </header>
             <div className="field">
               <label htmlFor="stmt-month">Period</label>
-              <select
+              <Dropdown
                 id="stmt-month"
                 value={month}
-                onChange={(e) => setMonth(e.target.value)}
-              >
-                {MONTHS.map((m) => (
-                  <option key={m.prefix} value={m.prefix}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setMonth}
+                options={MONTHS.map((m) => ({ value: m.prefix, label: m.label }))}
+              />
             </div>
             <button
               type="button"

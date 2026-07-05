@@ -9,6 +9,8 @@ import {
 } from "./bookingsStore";
 import { PAY_CHIP } from "./Bookings";
 import CollectionsTrend from "./charts/CollectionsTrend";
+import Dropdown from "../components/Dropdown";
+import { toast } from "./toastStore";
 import mpesaLogo from "../assets/mpesa-logo.webp";
 import "./fleet.css";
 import "./bookings.css";
@@ -25,7 +27,6 @@ const bookingAmount = (b) => rentalDays(b.pickup, b.dropoff) * b.rate;
 export default function Payments() {
   const bookings = useSyncExternalStore(subscribe, getBookings);
   const [selectedRef, setSelectedRef] = useState("");
-  const [sentTo, setSentTo] = useState(null);
 
   const stats = useMemo(() => {
     let collected = 0;
@@ -65,7 +66,7 @@ export default function Payments() {
   function sendPrompt() {
     if (!selected) return;
     setPayment(selected.ref, "Prompt sent");
-    setSentTo({ customer: selected.customer, phone: selected.phone });
+    toast(`STK push sent to ${selected.customer} (${selected.phone}).`);
   }
 
   const settled = bookings
@@ -121,20 +122,15 @@ export default function Payments() {
               <>
                 <div className="field">
                   <label htmlFor="prompt-booking">Booking</label>
-                  <select
+                  <Dropdown
                     id="prompt-booking"
                     value={selected.ref}
-                    onChange={(e) => {
-                      setSelectedRef(e.target.value);
-                      setSentTo(null);
-                    }}
-                  >
-                    {promptable.map((b) => (
-                      <option key={b.ref} value={b.ref}>
-                        {b.customer} · {b.ref}, KES {fmtAmount(bookingAmount(b))}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedRef}
+                    options={promptable.map((b) => ({
+                      value: b.ref,
+                      label: `${b.customer} · ${b.ref}, KES ${fmtAmount(bookingAmount(b))}`,
+                    }))}
+                  />
                 </div>
 
                 <dl className="prompt-meta">
@@ -166,12 +162,6 @@ export default function Payments() {
                   </span>
                   {selected.payment === "Prompt sent" ? "Resend prompt" : "Send prompt"}
                 </button>
-
-                {sentTo && (
-                  <p className="prompt-sent-note" role="status">
-                    STK push sent to {sentTo.customer} ({sentTo.phone}).
-                  </p>
-                )}
               </>
             )}
           </section>

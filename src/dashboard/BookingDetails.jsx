@@ -21,6 +21,7 @@ import {
 } from "./policyStore";
 import { STATUS_CHIP, PAY_CHIP } from "./Bookings";
 import { downloadAgreement } from "./pdf";
+import { toast } from "./toastStore";
 import mpesaLogo from "../assets/mpesa-logo.webp";
 import "./fleet.css";
 import "./bookings.css";
@@ -28,6 +29,12 @@ import "./bookings.css";
 const fmtAmount = (n) => n.toLocaleString("en-KE");
 
 const FUEL_LEVELS = ["Full", "3/4", "1/2", "1/4", "Reserve"];
+
+const STATUS_TOAST = {
+  Confirmed: "Booking confirmed.",
+  Active: "Rental started.",
+  Completed: "Booking marked completed.",
+};
 
 const nowLabel = () =>
   new Date().toLocaleString("en-KE", {
@@ -79,6 +86,7 @@ export default function BookingDetails() {
       at: nowLabel(),
       notes: f.get("notes").trim(),
     });
+    toast("Check-out recorded, keys can go out.");
   }
 
   function handleCheckIn(e) {
@@ -87,14 +95,23 @@ export default function BookingDetails() {
     const returned = new Date(f.get("returnedAt"));
     const due = new Date(`${b.dropoff}T${String(RETURN_HOUR).padStart(2, "0")}:00:00`);
     const lateHours = Math.max(0, Math.ceil((returned - due) / 3600000));
+    const pen = lateHours * policy.lateFeePerHour;
     recordCheckIn(b.ref, {
       odometer: Number(f.get("odometer")),
       fuel: f.get("fuel"),
       at: returned.toLocaleString("en-KE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
       lateHours,
-      penalty: lateHours * policy.lateFeePerHour,
+      penalty: pen,
       notes: f.get("notes").trim(),
     });
+    if (lateHours > 0) {
+      toast(
+        `Check-in recorded, ${lateHours} hr${lateHours > 1 ? "s" : ""} late. KES ${pen.toLocaleString("en-KE")} penalty applied.`,
+        "danger"
+      );
+    } else {
+      toast("Check-in recorded, returned on time.");
+    }
   }
 
   return (
@@ -119,7 +136,10 @@ export default function BookingDetails() {
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => setStatus(b.ref, next.to)}
+              onClick={() => {
+                setStatus(b.ref, next.to);
+                toast(STATUS_TOAST[next.to] || "Booking updated.");
+              }}
             >
               {next.label}
             </button>
@@ -134,6 +154,7 @@ export default function BookingDetails() {
                   onClick={() => {
                     setStatus(b.ref, "Cancelled");
                     setCancelling(false);
+                    toast("Booking cancelled.", "danger");
                   }}
                 >
                   Yes
@@ -359,14 +380,20 @@ export default function BookingDetails() {
                 <button
                   type="button"
                   className="icon-btn"
-                  onClick={() => setDepositStatus(b.ref, "Refunded")}
+                  onClick={() => {
+                    setDepositStatus(b.ref, "Refunded");
+                    toast("Security deposit refunded.");
+                  }}
                 >
                   Refund deposit
                 </button>
                 <button
                   type="button"
                   className="icon-btn danger"
-                  onClick={() => setDepositStatus(b.ref, "Forfeited")}
+                  onClick={() => {
+                    setDepositStatus(b.ref, "Forfeited");
+                    toast("Security deposit forfeited.", "danger");
+                  }}
                 >
                   Forfeit
                 </button>
@@ -377,7 +404,10 @@ export default function BookingDetails() {
                 <button
                   type="button"
                   className="btn mpesa-btn"
-                  onClick={() => setPayment(b.ref, "Prompt sent")}
+                  onClick={() => {
+                    setPayment(b.ref, "Prompt sent");
+                    toast(`M-Pesa prompt sent to ${b.phone}.`);
+                  }}
                 >
                   <span className="mpesa-badge">
                     <img src={mpesaLogo} alt="M-Pesa" />

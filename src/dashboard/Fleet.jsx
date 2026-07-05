@@ -6,6 +6,7 @@ import {
   removeVehicle,
   expiringSoon,
 } from "./fleetStore";
+import { toast } from "./toastStore";
 import "./fleet.css";
 
 const STATUSES = ["All", "Available", "On booking", "In maintenance"];
@@ -160,6 +161,7 @@ export default function Fleet() {
                           onClick={() => {
                             removeVehicle(v.plate);
                             setConfirming(null);
+                            toast(`${v.name} (${v.plate}) removed from the fleet.`, "danger");
                           }}
                         >
                           Yes

@@ -4,6 +4,8 @@ import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
 import { subscribe as subscribePolicy, getPolicy, setPolicy, RETURN_HOUR } from "./policyStore";
 import { CHECK_PRICE } from "./verificationsStore";
 import VerifiedBadge from "../components/VerifiedBadge";
+import Dropdown from "../components/Dropdown";
+import { toast } from "./toastStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./workspace.css";
@@ -22,8 +24,7 @@ const PREFS = [
 export default function Settings() {
   const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
   const policy = useSyncExternalStore(subscribePolicy, getPolicy);
-  const [saved, setSaved] = useState(false);
-  const [policySaved, setPolicySaved] = useState(false);
+  const [currency, setCurrency] = useState("KES, Kenyan shilling");
 
   function handlePolicySave(e) {
     e.preventDefault();
@@ -32,7 +33,7 @@ export default function Settings() {
       deposit: Number(f.get("deposit")),
       lateFeePerHour: Number(f.get("lateFee")),
     });
-    setPolicySaved(true);
+    toast("Rental policy saved.");
   }
   const [prefs, setPrefs] = useState({
     bookings: true,
@@ -46,7 +47,7 @@ export default function Settings() {
 
   function handleSave(e) {
     e.preventDefault();
-    setSaved(true);
+    toast("Business profile saved.");
   }
 
   return (
@@ -58,7 +59,7 @@ export default function Settings() {
               <h2>Business profile</h2>
               <p>Shown on customer-facing prompts and receipts</p>
             </header>
-            <form onSubmit={handleSave} onChange={() => setSaved(false)}>
+            <form onSubmit={handleSave}>
               <div className="form-grid">
                 <div className="field">
                   <label htmlFor="set-name">Business name</label>
@@ -78,17 +79,18 @@ export default function Settings() {
                 </div>
                 <div className="field">
                   <label htmlFor="set-currency">Currency</label>
-                  <select id="set-currency" defaultValue="KES, Kenyan shilling">
-                    <option>KES, Kenyan shilling</option>
-                    <option>USD, US dollar</option>
-                  </select>
+                  <Dropdown
+                    id="set-currency"
+                    value={currency}
+                    onChange={setCurrency}
+                    options={["KES, Kenyan shilling", "USD, US dollar"]}
+                  />
                 </div>
               </div>
               <div className="form-actions">
                 <button type="submit" className="btn btn-primary">
                   Save changes
                 </button>
-                {saved && <p className="save-note">Changes saved.</p>}
               </div>
             </form>
           </section>
@@ -98,7 +100,7 @@ export default function Settings() {
               <h2>Rental policy</h2>
               <p>Applied to agreements, deposits and late returns</p>
             </header>
-            <form onSubmit={handlePolicySave} onChange={() => setPolicySaved(false)}>
+            <form onSubmit={handlePolicySave}>
               <div className="form-grid">
                 <div className="field">
                   <label htmlFor="pol-deposit">Security deposit (KES)</label>
@@ -129,7 +131,6 @@ export default function Settings() {
                 <button type="submit" className="btn btn-primary">
                   Save policy
                 </button>
-                {policySaved && <p className="save-note">Policy saved.</p>}
               </div>
             </form>
             <p className="side-hint">

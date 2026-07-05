@@ -103,24 +103,27 @@ export default function Landing() {
       {/* ---- Hero (white) ---- */}
       <section className="panel hero">
         <div className="hero-body">
-          <h1>
-            Run your entire rental
-            <br />
-            business from <span className="hl">one place</span>.
-          </h1>
-          <p className="hero-sub">
-            Fleet, bookings, verified customers and payments. The operational
-            backbone premium car rental businesses run on, billed monthly with
-            no heavy setup.
-          </p>
-          <div className="hero-cta">
-            <Link to="/dashboard" className="btn btn-primary">
-              View live demo
-            </Link>
-            <Link to="/signup" className="btn btn-ghost">
-              Request access
-            </Link>
+          <div className="hero-copy">
+            <h1>
+              Run your entire rental
+              <br />
+              business from <span className="hl">one place</span>.
+            </h1>
+            <p className="hero-sub">
+              Fleet, bookings, verified customers and payments. The operational
+              backbone premium car rental businesses run on, billed monthly with
+              no heavy setup.
+            </p>
+            <div className="hero-cta">
+              <Link to="/dashboard" className="btn btn-primary">
+                View live demo
+              </Link>
+              <Link to="/signup" className="btn btn-ghost">
+                Request access
+              </Link>
+            </div>
           </div>
+          {/* hero car visual parked for now — asset: assets/landing-car.png */}
         </div>
 
         <a href="#modules" className="scroll-cue" aria-label="Scroll to see more">

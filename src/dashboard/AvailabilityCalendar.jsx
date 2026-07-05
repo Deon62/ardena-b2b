@@ -7,6 +7,7 @@ import {
   getBlocked,
   toggleBlocked,
 } from "./availabilityStore";
+import Dropdown from "../components/Dropdown";
 import "./availability.css";
 
 /* Smart availability calendar: booked days come from live bookings, and
@@ -84,17 +85,16 @@ export default function AvailabilityCalendar() {
     <section className="panel-card">
       <div className="fleet-toolbar">
         <div className="field cal-vehicle">
-          <select
+          <Dropdown
+            id="cal-vehicle"
             value={plate}
-            onChange={(e) => setPlate(e.target.value)}
-            aria-label="Choose a vehicle"
-          >
-            {vehicles.map((v) => (
-              <option key={v.plate} value={v.plate}>
-                {v.name} · {v.plate}
-              </option>
-            ))}
-          </select>
+            onChange={setPlate}
+            placeholder="Choose a vehicle"
+            options={vehicles.map((v) => ({
+              value: v.plate,
+              label: `${v.name} · ${v.plate}`,
+            }))}
+          />
         </div>
 
         <div className="cal-nav">

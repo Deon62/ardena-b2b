@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { addVehicle, getVehicle, formatDateInput } from "./fleetStore";
+import Dropdown from "../components/Dropdown";
+import { toast } from "./toastStore";
 import "./fleet.css";
 
 const CATEGORIES = ["SUV", "Saloon", "Hatchback", "Van", "Pickup"];
@@ -8,7 +10,8 @@ const CATEGORIES = ["SUV", "Saloon", "Hatchback", "Van", "Pickup"];
 export default function AddVehicle() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
-  const [added, setAdded] = useState("");
+  const [cat, setCat] = useState("SUV");
+  const [vStatus, setVStatus] = useState("Available");
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -19,7 +22,6 @@ export default function AddVehicle() {
 
     if (getVehicle(plate)) {
       setError(`A vehicle with plate ${plate} is already in your fleet.`);
-      setAdded("");
       return;
     }
 
@@ -35,10 +37,12 @@ export default function AddVehicle() {
       notes: f.get("notes").trim(),
     });
 
+    toast(`${plate} added to your fleet.`);
     if (stay) {
       setError("");
-      setAdded(`${plate} added to your fleet.`);
       form.reset();
+      setCat("SUV");
+      setVStatus("Available");
       return;
     }
     navigate("/dashboard/fleet");
@@ -73,11 +77,13 @@ export default function AddVehicle() {
             </div>
             <div className="field">
               <label htmlFor="v-cat">Category</label>
-              <select id="v-cat" name="cat" defaultValue="SUV">
-                {CATEGORIES.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
+              <Dropdown
+                id="v-cat"
+                name="cat"
+                value={cat}
+                onChange={setCat}
+                options={CATEGORIES}
+              />
             </div>
             <div className="field">
               <label htmlFor="v-rate">Day rate (KES)</label>
@@ -93,10 +99,13 @@ export default function AddVehicle() {
             </div>
             <div className="field">
               <label htmlFor="v-status">Status</label>
-              <select id="v-status" name="status" defaultValue="Available">
-                <option>Available</option>
-                <option>In maintenance</option>
-              </select>
+              <Dropdown
+                id="v-status"
+                name="status"
+                value={vStatus}
+                onChange={setVStatus}
+                options={["Available", "In maintenance"]}
+              />
             </div>
             <div className="field form-full">
               <label htmlFor="v-notes">Notes</label>
@@ -133,11 +142,6 @@ export default function AddVehicle() {
                 Cancel
               </Link>
             </div>
-            {added && (
-              <p className="action-done" role="status">
-                {added}
-              </p>
-            )}
             <p className="action-hint">
               New vehicles are bookable straight away unless you set them to
               maintenance.

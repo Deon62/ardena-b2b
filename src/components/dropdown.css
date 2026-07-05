@@ -1,0 +1,89 @@
+/* ---- Custom dropdown (replaces native selects) ---- */
+
+.dd {
+  position: relative;
+  width: 100%;
+}
+
+.dd-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 15px;
+  text-align: left;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--bg);
+  box-shadow: var(--neo-in);
+  transition: box-shadow 0.15s var(--ease);
+}
+
+.dd-trigger:focus-visible,
+.dd.open .dd-trigger {
+  box-shadow: var(--neo-in), 0 0 0 3px var(--brand-soft);
+  outline: none;
+}
+
+.dd-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dd-placeholder {
+  color: var(--ink-mute);
+}
+
+.dd-caret {
+  flex-shrink: 0;
+  color: var(--ink-mute);
+  transition: transform 0.15s var(--ease);
+}
+
+.dd.open .dd-caret {
+  transform: rotate(180deg);
+}
+
+.dd-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--panel);
+  box-shadow: 0 14px 40px rgba(163, 174, 192, 0.5);
+  padding: 6px;
+  max-height: 264px;
+  overflow-y: auto;
+  animation: rise 0.18s var(--ease) both;
+}
+
+.dd-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  transition: background 0.1s var(--ease), color 0.1s var(--ease);
+}
+
+.dd-option:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.dd-option.selected {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.dd-option svg {
+  flex-shrink: 0;
+  color: var(--brand-dark);
+}
