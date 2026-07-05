@@ -6,6 +6,7 @@ import {
   fmtRange,
   rentalDays,
 } from "./bookingsStore";
+import AvailabilityCalendar from "./AvailabilityCalendar";
 import "./fleet.css";
 import "./bookings.css";
 
@@ -32,6 +33,7 @@ export default function Bookings() {
   const bookings = useSyncExternalStore(subscribe, getBookings);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
+  const [view, setView] = useState("list");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -85,6 +87,28 @@ export default function Bookings() {
         </article>
       </div>
 
+      <div className="view-switch">
+        <div className="seg" role="group" aria-label="Switch view">
+          <button
+            type="button"
+            className={view === "list" ? "active" : ""}
+            onClick={() => setView("list")}
+          >
+            List
+          </button>
+          <button
+            type="button"
+            className={view === "calendar" ? "active" : ""}
+            onClick={() => setView("calendar")}
+          >
+            Calendar
+          </button>
+        </div>
+      </div>
+
+      {view === "calendar" && <AvailabilityCalendar />}
+
+      {view === "list" && (
       <section className="panel-card">
         <div className="fleet-toolbar">
           <div className="search">
@@ -178,6 +202,7 @@ export default function Bookings() {
           </div>
         )}
       </section>
+      )}
     </>
   );
 }

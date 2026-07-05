@@ -12,6 +12,10 @@ import {
   todayISO,
 } from "./bookingsStore";
 import { getPolicy } from "./policyStore";
+import {
+  subscribe as subscribeAvail,
+  getBlocked,
+} from "./availabilityStore";
 import DateRangePicker from "./DateRangePicker";
 import "./fleet.css";
 import "./bookings.css";
@@ -37,10 +41,12 @@ export default function NewBooking() {
     [vehicles]
   );
   const vehicle = bookable.find((v) => v.plate === plate);
+  const blockedMap = useSyncExternalStore(subscribeAvail, getBlocked);
 
-  // days already taken by live bookings for the chosen vehicle
+  // days already taken by live bookings, or blocked on the availability
+  // calendar, for the chosen vehicle
   const bookedDays = useMemo(() => {
-    const days = new Set();
+    const days = new Set(blockedMap[plate] || []);
     if (!plate) return days;
     getBookings()
       .filter(
@@ -57,7 +63,7 @@ export default function NewBooking() {
         }
       });
     return days;
-  }, [plate, vehicles]);
+  }, [plate, vehicles, blockedMap]);
 
   // switching vehicles can invalidate an already-picked range
   useEffect(() => {

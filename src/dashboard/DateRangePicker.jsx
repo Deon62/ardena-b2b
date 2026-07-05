@@ -146,7 +146,7 @@ export default function DateRangePicker({
           ? "Pick the pickup date"
           : !end
             ? "Now pick the return date"
-            : "Booked and past dates are crossed out"}
+            : "Booked, blocked and past dates are crossed out"}
       </p>
     </div>
   );
