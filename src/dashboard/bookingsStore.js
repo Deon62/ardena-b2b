@@ -1,4 +1,5 @@
 // In-memory bookings store (mock backend), same pattern as fleetStore.
+import { markStep } from "./onboardingStore";
 // Pages subscribe via useSyncExternalStore, so create/status actions
 // reflect everywhere until a real API replaces this.
 // Lifecycle: Pending → Confirmed → Active → Completed, or Cancelled early.
@@ -95,6 +96,7 @@ export function addBooking(b) {
     },
     ...bookings,
   ];
+  markStep("booking");
   emit();
   return ref;
 }
@@ -135,6 +137,7 @@ export function recordCheckIn(ref, inn) {
 
 export function setPayment(ref, payment) {
   bookings = bookings.map((b) => (b.ref === ref ? { ...b, payment } : b));
+  if (payment === "Prompt sent") markStep("prompt");
   emit();
 }
 

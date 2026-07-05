@@ -9,6 +9,7 @@ import {
   WALLET_BALANCE,
   WIDGET_URL,
 } from "./verificationsStore";
+import { markStep } from "./onboardingStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./verification.css";
@@ -48,6 +49,7 @@ export default function Verification() {
   function copyLink() {
     navigator.clipboard.writeText(WIDGET_URL).then(() => {
       setCopied(true);
+      markStep("verify");
       setTimeout(() => setCopied(false), 2000);
     });
   }
@@ -208,6 +210,7 @@ export default function Verification() {
               href={WIDGET_URL}
               target="_blank"
               rel="noreferrer"
+              onClick={() => markStep("verify")}
             >
               Open verification widget
             </a>

@@ -1,5 +1,6 @@
 // In-memory fleet store (mock backend). Pages subscribe via useSyncExternalStore,
 // so add/delete actions reflect everywhere until a real API replaces this.
+import { markStep } from "./onboardingStore";
 
 let vehicles = [
   { name: "Toyota Prado", plate: "KDL 482A", cat: "SUV", rate: 12000, util: 82, ins: "12 Jul 2026", inspection: "4 Feb 2027", added: "14 Mar 2025", status: "On booking", notes: "" },
@@ -37,6 +38,7 @@ export function getVehicle(plate) {
 
 export function addVehicle(v) {
   vehicles = [{ notes: "", util: 0, ...v }, ...vehicles];
+  markStep("vehicle");
   emit();
 }
 

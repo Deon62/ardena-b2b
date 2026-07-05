@@ -1,5 +1,6 @@
 // In-memory staff store (mock backend), same pattern as the other stores.
 // Seats are unlimited on the Fleet plan.
+import { markStep } from "./onboardingStore";
 
 export const ROLES = ["Manager", "Booking agent", "Finance", "Viewer"];
 
@@ -54,6 +55,7 @@ export function inviteStaff({ name, email, role }) {
       lastActive: "—",
     },
   ];
+  markStep("team");
   emit();
 }
 

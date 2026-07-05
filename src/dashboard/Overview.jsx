@@ -1,6 +1,7 @@
 import BookingHeatmap from "./charts/BookingHeatmap";
 import RevenueDumbbell from "./charts/RevenueDumbbell";
 import UtilisationTrend from "./charts/UtilisationTrend";
+import OnboardingChecklist from "./OnboardingChecklist";
 import "./overview.css";
 
 const KPIS = [
@@ -77,6 +78,8 @@ const STATUS_ICON = {
 export default function Overview() {
   return (
     <>
+      <OnboardingChecklist />
+
       {/* ---- KPI row ---- */}
       <div className="stat-grid">
         {KPIS.map((k) => (
