@@ -233,6 +233,33 @@ h3 {
   box-shadow: var(--neo-in), 0 0 0 3px var(--brand-soft);
 }
 
+/* ---- Verified badge (shared: dashboard + public trust page) ---- */
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand-dark);
+  white-space: nowrap;
+}
+
+.verified-badge svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.verified-badge.compact {
+  gap: 0;
+}
+
+.verified-badge.compact svg {
+  width: 13px;
+  height: 13px;
+}
+
 /* ---- Motion ---- */
 
 @keyframes rise {

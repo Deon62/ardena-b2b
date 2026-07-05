@@ -52,7 +52,7 @@ export default function Login() {
         </form>
 
         <p className="auth-switch">
-          New to Ardena? <Link to="/signup">Create an account</Link>
+          New to Ardena? <Link to="/signup">Request access</Link>
         </p>
       </main>
     </div>

@@ -2,6 +2,7 @@ import { useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
 import { CHECK_PRICE } from "./verificationsStore";
+import VerifiedBadge from "../components/VerifiedBadge";
 import "./fleet.css";
 import "./bookings.css";
 import "./workspace.css";
@@ -133,6 +134,41 @@ export default function Settings() {
             <Link to="/dashboard/billing" className="btn btn-ghost pay-btn">
               Manage plan &amp; billing
             </Link>
+          </section>
+
+          <section className="panel-card">
+            <header className="card-head">
+              <h2>Business verification</h2>
+              <p>Checked before this account was opened</p>
+            </header>
+            <div className="pay-row">
+              <span>Status</span>
+              <VerifiedBadge />
+            </div>
+            <div className="pay-row">
+              <span>Registration</span>
+              <span className="mini-amount">Confirmed</span>
+            </div>
+            <div className="pay-row">
+              <span>KRA PIN</span>
+              <span className="mini-amount">Matched</span>
+            </div>
+            <div className="pay-row">
+              <span>Director ID</span>
+              <span className="mini-amount">Verified</span>
+            </div>
+            <a
+              className="btn btn-ghost pay-btn"
+              href="/v/acme-car-hire"
+              target="_blank"
+              rel="noreferrer"
+            >
+              View public verification page
+            </a>
+            <p className="side-hint">
+              Share that page with customers on WhatsApp or socials. It proves
+              Acme Car Hire is a real, verified rental business.
+            </p>
           </section>
 
           <section className="panel-card">

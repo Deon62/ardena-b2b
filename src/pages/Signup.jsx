@@ -1,13 +1,47 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import Logo from "../components/Logo";
+import usePageTitle from "../hooks/usePageTitle";
 import "./auth.css";
 
+const FLEET_SIZES = ["3 – 10 vehicles", "11 – 30 vehicles", "31 – 100 vehicles", "100+ vehicles"];
+
+/* Access is by request: every business is verified before logins are sent. */
 export default function Signup() {
-  const navigate = useNavigate();
+  usePageTitle("Request access");
+  const [sent, setSent] = useState(false);
 
   function handleSubmit(e) {
     e.preventDefault();
-    navigate("/dashboard");
+    setSent(true);
+  }
+
+  if (sent) {
+    return (
+      <div className="auth">
+        <header className="auth-nav">
+          <Logo />
+        </header>
+
+        <main className="auth-card">
+          <span className="request-check" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          </span>
+          <h1>Request received.</h1>
+          <p>
+            We verify every business before opening an account: registration,
+            KRA PIN and director identity. Expect your logins by email or
+            WhatsApp within 24 hours.
+          </p>
+          <p className="request-ref">Reference: REQ-2026-118</p>
+          <Link to="/" className="btn btn-ghost">
+            Back to home
+          </Link>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -21,49 +55,63 @@ export default function Signup() {
         <Logo />
       </header>
 
-      <main className="auth-card">
-        <h1>Create your account</h1>
-        <p>Set up your business in minutes. Free for 14 days.</p>
+      <main className="auth-card request-card">
+        <h1>Request access</h1>
+        <p>
+          Ardena for Business is for verified rental businesses only. Tell us
+          about yours and we'll send your logins within 24 hours.
+        </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="business">Business name</label>
-            <input
-              id="business"
-              type="text"
-              placeholder="Acme Car Hire Ltd"
-              autoComplete="organization"
-              required
-            />
+            <label htmlFor="r-business">Business name</label>
+            <input id="r-business" type="text" placeholder="Acme Car Hire Ltd" autoComplete="organization" required />
           </div>
           <div className="field">
-            <label htmlFor="email">Work email</label>
-            <input
-              id="email"
-              type="email"
-              placeholder="you@company.co.ke"
-              autoComplete="email"
-              required
-            />
+            <label htmlFor="r-reg">Business registration number</label>
+            <input id="r-reg" type="text" placeholder="PVT-ABC123XYZ" required />
+          </div>
+          <div className="auth-row">
+            <div className="field">
+              <label htmlFor="r-fleet">Fleet size</label>
+              <select id="r-fleet" defaultValue={FLEET_SIZES[0]}>
+                {FLEET_SIZES.map((f) => (
+                  <option key={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="r-town">Town / county</label>
+              <input id="r-town" type="text" placeholder="Nakuru" required />
+            </div>
           </div>
           <div className="field">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              placeholder="At least 8 characters"
-              autoComplete="new-password"
-              minLength={8}
-              required
-            />
+            <label htmlFor="r-name">Your name</label>
+            <input id="r-name" type="text" placeholder="Wanjiku Kamau" autoComplete="name" required />
+          </div>
+          <div className="auth-row">
+            <div className="field">
+              <label htmlFor="r-email">Work email</label>
+              <input id="r-email" type="email" placeholder="you@company.co.ke" autoComplete="email" required />
+            </div>
+            <div className="field">
+              <label htmlFor="r-phone">Phone (WhatsApp)</label>
+              <input id="r-phone" type="tel" placeholder="0700 000 000" autoComplete="tel" required />
+            </div>
           </div>
           <button type="submit" className="btn btn-primary">
-            Create account
+            Request access
           </button>
         </form>
 
+        <p className="request-note">
+          Every business on Ardena is verified. We check registration and
+          director details before any logins go out, so renters and partners
+          know your fleet is real.
+        </p>
+
         <p className="auth-switch">
-          Already have an account? <Link to="/login">Sign in</Link>
+          Already have logins? <Link to="/login">Sign in</Link>
         </p>
       </main>
     </div>

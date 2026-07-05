@@ -99,7 +99,7 @@ export default function About() {
         </div>
         <div className="hero-cta about-cta">
           <Link to="/signup" className="btn btn-primary">
-            Get started
+            Request access
           </Link>
           <Link to="/contact" className="btn btn-ghost">
             Talk to us

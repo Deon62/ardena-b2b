@@ -62,6 +62,10 @@ const fmtKES = (n) => n.toLocaleString("en-KE");
 
 const FAQS = [
   {
+    q: "How do I get an account?",
+    a: "Access is by request. Tell us about your business, we verify its registration and director details, then send your logins within 24 hours. Every fleet on Ardena is a real, verified rental business.",
+  },
+  {
     q: "How does billing work?",
     a: "You pay per vehicle on the platform, KES 400 a month each, and just KES 200 during your first 3 months, with every module included. Pay by card or M-Pesa, cancel anytime, and every account starts with a 14 day free trial.",
   },
@@ -114,7 +118,7 @@ export default function Landing() {
               View live demo
             </Link>
             <Link to="/signup" className="btn btn-ghost">
-              Create your account
+              Request access
             </Link>
           </div>
         </div>
@@ -191,7 +195,7 @@ export default function Landing() {
               <li>KES {fmtKES(MINIMUM)} monthly minimum</li>
             </ul>
             <Link to="/signup" className="btn btn-primary inverse">
-              Start free trial
+              Request access
             </Link>
           </article>
 
@@ -207,7 +211,7 @@ export default function Landing() {
               <li>No monthly commitment</li>
             </ul>
             <Link to="/signup" className="btn btn-ghost">
-              Get started
+              Request access
             </Link>
           </article>
         </Reveal>
@@ -244,10 +248,10 @@ export default function Landing() {
             <br />
             take rentals seriously.
           </h2>
-          <p>Start with a demo, or set up your fleet in minutes.</p>
+          <p>Start with a demo, or request access for your fleet.</p>
           <div className="hero-cta">
             <Link to="/signup" className="btn btn-primary">
-              Get started
+              Request access
             </Link>
             <Link to="/dashboard" className="btn btn-ghost">
               View live demo
