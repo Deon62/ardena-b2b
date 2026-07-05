@@ -423,3 +423,7 @@ a.icon-btn + .icon-btn {
   font-size: 13.5px;
   color: var(--ink-mute);
 }
+
+.stmt-btn {
+  margin-top: 14px;
+}

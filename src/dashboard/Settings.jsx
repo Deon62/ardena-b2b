@@ -1,6 +1,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
+import { subscribe as subscribePolicy, getPolicy, setPolicy, RETURN_HOUR } from "./policyStore";
 import { CHECK_PRICE } from "./verificationsStore";
 import VerifiedBadge from "../components/VerifiedBadge";
 import "./fleet.css";
@@ -20,7 +21,19 @@ const PREFS = [
 
 export default function Settings() {
   const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
+  const policy = useSyncExternalStore(subscribePolicy, getPolicy);
   const [saved, setSaved] = useState(false);
+  const [policySaved, setPolicySaved] = useState(false);
+
+  function handlePolicySave(e) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    setPolicy({
+      deposit: Number(f.get("deposit")),
+      lateFeePerHour: Number(f.get("lateFee")),
+    });
+    setPolicySaved(true);
+  }
   const [prefs, setPrefs] = useState({
     bookings: true,
     payments: true,
@@ -78,6 +91,52 @@ export default function Settings() {
                 {saved && <p className="save-note">Changes saved.</p>}
               </div>
             </form>
+          </section>
+
+          <section className="panel-card">
+            <header className="card-head">
+              <h2>Rental policy</h2>
+              <p>Applied to agreements, deposits and late returns</p>
+            </header>
+            <form onSubmit={handlePolicySave} onChange={() => setPolicySaved(false)}>
+              <div className="form-grid">
+                <div className="field">
+                  <label htmlFor="pol-deposit">Security deposit (KES)</label>
+                  <input
+                    id="pol-deposit"
+                    name="deposit"
+                    type="number"
+                    min="0"
+                    step="500"
+                    defaultValue={policy.deposit}
+                    required
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="pol-late">Late return penalty (KES per hour)</label>
+                  <input
+                    id="pol-late"
+                    name="lateFee"
+                    type="number"
+                    min="0"
+                    step="50"
+                    defaultValue={policy.lateFeePerHour}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-actions">
+                <button type="submit" className="btn btn-primary">
+                  Save policy
+                </button>
+                {policySaved && <p className="save-note">Policy saved.</p>}
+              </div>
+            </form>
+            <p className="side-hint">
+              Vehicles are due back by {RETURN_HOUR}:00 AM on the return date.
+              Every started hour after that is charged at the hourly penalty,
+              and both figures are written into every rental agreement.
+            </p>
           </section>
 
           <section className="panel-card">

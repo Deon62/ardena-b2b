@@ -21,6 +21,46 @@ let bookings = [
 
 let nextRef = 2439;
 
+/* Deposits and handover records (mock until the backend lands).
+   depositStatus: Pending (not yet collected) → Held → Refunded / Forfeited.
+   handover.out is recorded at pickup, handover.in at return. */
+const HANDOVERS = {
+  // live rentals: checked out, not yet back
+  "BK-2431": { out: { odometer: 48210, fuel: "Full", at: "2 Jul, 09:05", notes: "" }, in: null },
+  "BK-2429": { out: { odometer: 61340, fuel: "3/4", at: "30 Jun, 10:20", notes: "Small scratch on rear bumper noted." }, in: null },
+  "BK-2426": { out: { odometer: 30115, fuel: "Full", at: "1 Jul, 08:40", notes: "" }, in: null },
+  "BK-2424": { out: { odometer: 88770, fuel: "Full", at: "28 Jun, 07:55", notes: "" }, in: null },
+  // completed, returned on time
+  "BK-2415": {
+    out: { odometer: 74020, fuel: "Full", at: "12 Jun, 09:10", notes: "" },
+    in: { odometer: 75184, fuel: "3/4", at: "18 Jun, 09:40", lateHours: 0, penalty: 0, notes: "" },
+  },
+  "BK-2411": {
+    out: { odometer: 47180, fuel: "Full", at: "5 Jun, 08:30", notes: "" },
+    in: { odometer: 47905, fuel: "Full", at: "9 Jun, 09:15", lateHours: 0, penalty: 0, notes: "" },
+  },
+  // completed, returned 4 hours past the 10:00 due time
+  "BK-2419": {
+    out: { odometer: 52440, fuel: "Full", at: "20 Jun, 08:50", notes: "" },
+    in: { odometer: 53078, fuel: "1/2", at: "24 Jun, 14:00", lateHours: 4, penalty: 2000, notes: "Returned after lunch, fuel below handover level." },
+  },
+};
+
+const DEPOSIT_BY_STATUS = {
+  Pending: "Pending",
+  Confirmed: "Pending",
+  Active: "Held",
+  Completed: "Refunded",
+  Cancelled: "Refunded",
+};
+
+bookings = bookings.map((b) => ({
+  ...b,
+  // Alice's deposit stays held until her late fee is settled
+  depositStatus: b.ref === "BK-2419" ? "Held" : DEPOSIT_BY_STATUS[b.status],
+  handover: HANDOVERS[b.ref] || { out: null, in: null },
+}));
+
 const listeners = new Set();
 
 function emit() {
@@ -49,6 +89,8 @@ export function addBooking(b) {
       payment: "Unpaid",
       verification: "Pending",
       notes: "",
+      depositStatus: "Pending",
+      handover: { out: null, in: null },
       ...b,
     },
     ...bookings,
@@ -60,8 +102,33 @@ export function addBooking(b) {
 export function setStatus(ref, status) {
   bookings = bookings.map((b) =>
     b.ref === ref
-      ? { ...b, status, payment: status === "Cancelled" && b.payment === "Paid" ? "Refunded" : b.payment }
+      ? {
+          ...b,
+          status,
+          payment: status === "Cancelled" && b.payment === "Paid" ? "Refunded" : b.payment,
+          depositStatus:
+            status === "Active" && b.depositStatus === "Pending" ? "Held" : b.depositStatus,
+        }
       : b
+  );
+  emit();
+}
+
+export function setDepositStatus(ref, depositStatus) {
+  bookings = bookings.map((b) => (b.ref === ref ? { ...b, depositStatus } : b));
+  emit();
+}
+
+export function recordCheckOut(ref, out) {
+  bookings = bookings.map((b) =>
+    b.ref === ref ? { ...b, handover: { ...b.handover, out } } : b
+  );
+  emit();
+}
+
+export function recordCheckIn(ref, inn) {
+  bookings = bookings.map((b) =>
+    b.ref === ref ? { ...b, handover: { ...b.handover, in: inn } } : b
   );
   emit();
 }

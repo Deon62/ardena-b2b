@@ -6,20 +6,40 @@ import {
   getBooking,
   setStatus,
   setPayment,
+  setDepositStatus,
+  recordCheckOut,
+  recordCheckIn,
   NEXT_STEP,
   CANCELLABLE,
   fmtDate,
   rentalDays,
 } from "./bookingsStore";
+import {
+  subscribe as subscribePolicy,
+  getPolicy,
+  RETURN_HOUR,
+} from "./policyStore";
 import { STATUS_CHIP, PAY_CHIP } from "./Bookings";
+import { downloadAgreement } from "./pdf";
 import mpesaLogo from "../assets/mpesa-logo.webp";
 import "./fleet.css";
 import "./bookings.css";
 
 const fmtAmount = (n) => n.toLocaleString("en-KE");
 
+const FUEL_LEVELS = ["Full", "3/4", "1/2", "1/4", "Reserve"];
+
+const nowLabel = () =>
+  new Date().toLocaleString("en-KE", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
 export default function BookingDetails() {
   useSyncExternalStore(subscribe, getBookings); // re-render on store changes
+  const policy = useSyncExternalStore(subscribePolicy, getPolicy);
   const { ref } = useParams();
   const [cancelling, setCancelling] = useState(false);
 
@@ -45,6 +65,35 @@ export default function BookingDetails() {
   const next = NEXT_STEP[b.status];
   const canCancel = CANCELLABLE.includes(b.status);
   const canPrompt = b.payment !== "Paid" && b.payment !== "Refunded" && b.status !== "Cancelled" && b.status !== "Completed";
+  const ho = b.handover;
+  const penalty = ho.in ? ho.in.penalty : 0;
+
+  function handleCheckOut(e) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    recordCheckOut(b.ref, {
+      odometer: Number(f.get("odometer")),
+      fuel: f.get("fuel"),
+      at: nowLabel(),
+      notes: f.get("notes").trim(),
+    });
+  }
+
+  function handleCheckIn(e) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const returned = new Date(f.get("returnedAt"));
+    const due = new Date(`${b.dropoff}T${String(RETURN_HOUR).padStart(2, "0")}:00:00`);
+    const lateHours = Math.max(0, Math.ceil((returned - due) / 3600000));
+    recordCheckIn(b.ref, {
+      odometer: Number(f.get("odometer")),
+      fuel: f.get("fuel"),
+      at: returned.toLocaleString("en-KE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
+      lateHours,
+      penalty: lateHours * policy.lateFeePerHour,
+      notes: f.get("notes").trim(),
+    });
+  }
 
   return (
     <>
@@ -103,62 +152,179 @@ export default function BookingDetails() {
       </div>
 
       <div className="details-grid">
-        <section className="panel-card">
-          <header className="card-head">
-            <h2>Booking information</h2>
-            <p>Reservation record</p>
-          </header>
-          <dl className="spec-grid">
-            <div className="spec">
-              <dt>Customer</dt>
-              <dd>{b.customer}</dd>
-            </div>
-            <div className="spec">
-              <dt>Phone</dt>
-              <dd>{b.phone}</dd>
-            </div>
-            <div className="spec">
-              <dt>Vehicle</dt>
-              <dd>
-                <Link className="spec-link" to={`/dashboard/fleet/${encodeURIComponent(b.plate)}`}>
-                  {b.vehicle} · {b.plate}
-                </Link>
-              </dd>
-            </div>
-            <div className="spec">
-              <dt>Day rate</dt>
-              <dd>KES {fmtAmount(b.rate)}</dd>
-            </div>
-            <div className="spec">
-              <dt>Pickup</dt>
-              <dd>{fmtDate(b.pickup)}</dd>
-            </div>
-            <div className="spec">
-              <dt>Return</dt>
-              <dd>{fmtDate(b.dropoff)}</dd>
-            </div>
-            <div className="spec">
-              <dt>Duration</dt>
-              <dd>
-                {days} day{days > 1 ? "s" : ""}
-              </dd>
-            </div>
-            <div className="spec">
-              <dt>Pickup location</dt>
-              <dd>{b.location}</dd>
-            </div>
-            <div className="spec">
-              <dt>Created</dt>
-              <dd>{fmtDate(b.created)}</dd>
-            </div>
-            {b.notes && (
-              <div className="spec spec-full">
-                <dt>Notes</dt>
-                <dd>{b.notes}</dd>
+        <div className="settings-main">
+          <section className="panel-card">
+            <header className="card-head">
+              <h2>Booking information</h2>
+              <p>Reservation record</p>
+            </header>
+            <dl className="spec-grid">
+              <div className="spec">
+                <dt>Customer</dt>
+                <dd>{b.customer}</dd>
               </div>
+              <div className="spec">
+                <dt>Phone</dt>
+                <dd>{b.phone}</dd>
+              </div>
+              <div className="spec">
+                <dt>Vehicle</dt>
+                <dd>
+                  <Link className="spec-link" to={`/dashboard/fleet/${encodeURIComponent(b.plate)}`}>
+                    {b.vehicle} · {b.plate}
+                  </Link>
+                </dd>
+              </div>
+              <div className="spec">
+                <dt>Day rate</dt>
+                <dd>KES {fmtAmount(b.rate)}</dd>
+              </div>
+              <div className="spec">
+                <dt>Pickup</dt>
+                <dd>{fmtDate(b.pickup)}</dd>
+              </div>
+              <div className="spec">
+                <dt>Return</dt>
+                <dd>
+                  {fmtDate(b.dropoff)} · by {RETURN_HOUR}:00 AM
+                </dd>
+              </div>
+              <div className="spec">
+                <dt>Duration</dt>
+                <dd>
+                  {days} day{days > 1 ? "s" : ""}
+                </dd>
+              </div>
+              <div className="spec">
+                <dt>Pickup location</dt>
+                <dd>{b.location}</dd>
+              </div>
+              <div className="spec">
+                <dt>Created</dt>
+                <dd>{fmtDate(b.created)}</dd>
+              </div>
+              {b.notes && (
+                <div className="spec spec-full">
+                  <dt>Notes</dt>
+                  <dd>{b.notes}</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+
+          {/* ---- Handover: check-out at pickup, check-in at return ---- */}
+          <section className="panel-card">
+            <header className="card-head">
+              <h2>Handover</h2>
+              <p>Condition recorded at pickup and return</p>
+            </header>
+
+            {!ho.out && b.status !== "Cancelled" && (
+              <form className="ho-form" onSubmit={handleCheckOut}>
+                <p className="ho-step">Check-out · record before handing over keys</p>
+                <div className="form-grid">
+                  <div className="field">
+                    <label htmlFor="ho-odo">Odometer (km)</label>
+                    <input id="ho-odo" name="odometer" type="number" min="0" placeholder="48210" required />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="ho-fuel">Fuel level</label>
+                    <select id="ho-fuel" name="fuel" defaultValue="Full">
+                      {FUEL_LEVELS.map((l) => (
+                        <option key={l}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field form-full">
+                    <label htmlFor="ho-notes">Condition notes</label>
+                    <textarea id="ho-notes" name="notes" rows="2" placeholder="Scratches, dents, anything the renter should not be charged for" />
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary">
+                    Record check-out
+                  </button>
+                </div>
+              </form>
             )}
-          </dl>
-        </section>
+
+            {ho.out && (
+              <>
+                <div className="pay-row">
+                  <span>Checked out · {ho.out.at}</span>
+                  <span className="mini-amount">
+                    {fmtAmount(ho.out.odometer)} km · fuel {ho.out.fuel}
+                  </span>
+                </div>
+                {ho.out.notes && <p className="ho-note">Out: {ho.out.notes}</p>}
+              </>
+            )}
+
+            {ho.out && !ho.in && b.status === "Active" && (
+              <form className="ho-form ho-return" onSubmit={handleCheckIn}>
+                <p className="ho-step">
+                  Check-in · due {fmtDate(b.dropoff)} by {RETURN_HOUR}:00 AM, then KES{" "}
+                  {fmtAmount(policy.lateFeePerHour)} per started hour
+                </p>
+                <div className="form-grid">
+                  <div className="field">
+                    <label htmlFor="hi-odo">Odometer (km)</label>
+                    <input id="hi-odo" name="odometer" type="number" min={ho.out.odometer} placeholder={String(ho.out.odometer)} required />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="hi-fuel">Fuel level</label>
+                    <select id="hi-fuel" name="fuel" defaultValue="Full">
+                      {FUEL_LEVELS.map((l) => (
+                        <option key={l}>{l}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="hi-at">Returned at</label>
+                    <input id="hi-at" name="returnedAt" type="datetime-local" defaultValue={`${b.dropoff}T10:00`} required />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="hi-notes">Return notes</label>
+                    <input id="hi-notes" name="notes" type="text" placeholder="New damage, missing items" />
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary">
+                    Record check-in
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {ho.in && (
+              <>
+                <div className="pay-row">
+                  <span>Checked in · {ho.in.at}</span>
+                  <span className="mini-amount">
+                    {fmtAmount(ho.in.odometer)} km · fuel {ho.in.fuel}
+                  </span>
+                </div>
+                <div className="pay-row">
+                  <span>Distance driven</span>
+                  <span className="mini-amount">{fmtAmount(ho.in.odometer - ho.out.odometer)} km</span>
+                </div>
+                <div className="pay-row">
+                  <span>Late return</span>
+                  <span className={`mini-amount${ho.in.lateHours > 0 ? " penalty-red" : ""}`}>
+                    {ho.in.lateHours > 0
+                      ? `${ho.in.lateHours} hr${ho.in.lateHours > 1 ? "s" : ""} · KES ${fmtAmount(ho.in.penalty)}`
+                      : "On time"}
+                  </span>
+                </div>
+                {ho.in.notes && <p className="ho-note">In: {ho.in.notes}</p>}
+              </>
+            )}
+
+            {!ho.out && b.status === "Cancelled" && (
+              <p className="side-hint">Booking was cancelled before handover.</p>
+            )}
+          </section>
+        </div>
 
         <div className="details-side">
           <section className="panel-card">
@@ -171,6 +337,38 @@ export default function BookingDetails() {
               <span>Status</span>
               <span className={`chip ${PAY_CHIP[b.payment]}`}>{b.payment}</span>
             </div>
+            <div className="pay-row">
+              <span>Security deposit</span>
+              <span className="mini-amount">
+                KES {fmtAmount(policy.deposit)} · {b.depositStatus}
+              </span>
+            </div>
+            {penalty > 0 && (
+              <div className="pay-row">
+                <span>Late return penalty</span>
+                <span className="mini-amount penalty-red">
+                  KES {fmtAmount(penalty)} · {ho.in.lateHours} hr{ho.in.lateHours > 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
+            {b.depositStatus === "Held" && ho.in && (
+              <div className="deposit-actions">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  onClick={() => setDepositStatus(b.ref, "Refunded")}
+                >
+                  Refund deposit
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn danger"
+                  onClick={() => setDepositStatus(b.ref, "Forfeited")}
+                >
+                  Forfeit
+                </button>
+              </div>
+            )}
             {canPrompt && (
               <>
                 <button
@@ -188,6 +386,29 @@ export default function BookingDetails() {
                 </p>
               </>
             )}
+          </section>
+
+          <section className="panel-card">
+            <header className="card-head">
+              <h2>Rental agreement</h2>
+              <p>PDF, ready for signing at pickup</p>
+            </header>
+            <button
+              type="button"
+              className="btn btn-primary pay-btn"
+              onClick={() => downloadAgreement(b, policy)}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12m0 0l-4-4m4 4l4-4" />
+                <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+              </svg>
+              Download agreement
+            </button>
+            <p className="side-hint">
+              Pre-filled with the booking, your KES {fmtAmount(policy.deposit)}{" "}
+              deposit and the KES {fmtAmount(policy.lateFeePerHour)}/hour late
+              clause from your rental policy.
+            </p>
           </section>
 
           <section className="panel-card">

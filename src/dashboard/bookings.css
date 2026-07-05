@@ -104,6 +104,40 @@
   line-height: 1.5;
 }
 
+/* ---- Handover / deposits / penalties ---- */
+
+.ho-step {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-mute);
+  margin-bottom: 14px;
+}
+
+.ho-form.ho-return {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 18px;
+}
+
+.ho-note {
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  margin: -6px 0 14px;
+  line-height: 1.5;
+}
+
+.penalty-red {
+  color: var(--danger);
+}
+
+.deposit-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
 .spec-link {
   font-weight: 500;
   transition: color 0.15s var(--ease);

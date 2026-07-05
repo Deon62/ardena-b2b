@@ -7,7 +7,15 @@ import {
   removeVehicle,
   expiringSoon,
 } from "./fleetStore";
+import { getBookings } from "./bookingsStore";
+import { downloadVehicleStatement } from "./pdf";
 import "./fleet.css";
+
+const MONTHS = [
+  { label: "July 2026", prefix: "2026-07" },
+  { label: "June 2026", prefix: "2026-06" },
+  { label: "May 2026", prefix: "2026-05" },
+];
 
 const CHIP_CLASS = {
   Available: "available",
@@ -25,6 +33,7 @@ export default function VehicleDetails() {
   const { plate } = useParams();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
+  const [month, setMonth] = useState(MONTHS[1].prefix); // June has the history
 
   const v = getVehicle(decodeURIComponent(plate));
 
@@ -169,6 +178,49 @@ export default function VehicleDetails() {
             ) : (
               <p className="mini-empty">No upcoming bookings.</p>
             )}
+          </section>
+
+          <section className="panel-card">
+            <header className="card-head">
+              <h2>Statements</h2>
+              <p>Monthly earnings for this vehicle, as PDF</p>
+            </header>
+            <div className="field">
+              <label htmlFor="stmt-month">Period</label>
+              <select
+                id="stmt-month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+              >
+                {MONTHS.map((m) => (
+                  <option key={m.prefix} value={m.prefix}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              className="btn btn-ghost pay-btn stmt-btn"
+              onClick={() =>
+                downloadVehicleStatement(
+                  v,
+                  getBookings(),
+                  MONTHS.find((m) => m.prefix === month).label,
+                  month
+                )
+              }
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3v12m0 0l-4-4m4 4l4-4" />
+                <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+              </svg>
+              Download statement
+            </button>
+            <p className="side-hint">
+              Bookings, days rented, utilisation and gross earnings for the
+              period. Share it with the vehicle's owner.
+            </p>
           </section>
         </div>
       </div>
