@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { addVehicle, getVehicle, formatDateInput } from "./fleetStore";
 import Dropdown from "../components/Dropdown";
+import DatePicker from "./DatePicker";
+import { todayISO } from "./bookingsStore";
 import { toast } from "./toastStore";
 import "./fleet.css";
 
@@ -12,6 +14,8 @@ export default function AddVehicle() {
   const [error, setError] = useState("");
   const [cat, setCat] = useState("SUV");
   const [vStatus, setVStatus] = useState("Available");
+  const [ins, setIns] = useState("");
+  const [inspection, setInspection] = useState("");
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -22,6 +26,10 @@ export default function AddVehicle() {
 
     if (getVehicle(plate)) {
       setError(`A vehicle with plate ${plate} is already in your fleet.`);
+      return;
+    }
+    if (!ins) {
+      setError("Pick the insurance expiry date.");
       return;
     }
 
@@ -43,6 +51,8 @@ export default function AddVehicle() {
       form.reset();
       setCat("SUV");
       setVStatus("Available");
+      setIns("");
+      setInspection("");
       return;
     }
     navigate("/dashboard/fleet");
@@ -91,11 +101,25 @@ export default function AddVehicle() {
             </div>
             <div className="field">
               <label htmlFor="v-ins">Insurance expiry</label>
-              <input id="v-ins" name="ins" type="date" required />
+              <DatePicker
+                id="v-ins"
+                name="ins"
+                value={ins}
+                onChange={setIns}
+                minDate={todayISO()}
+                placeholder="Pick the expiry date"
+              />
             </div>
             <div className="field">
               <label htmlFor="v-inspection">Inspection due</label>
-              <input id="v-inspection" name="inspection" type="date" />
+              <DatePicker
+                id="v-inspection"
+                name="inspection"
+                value={inspection}
+                onChange={setInspection}
+                minDate={todayISO()}
+                placeholder="Optional"
+              />
             </div>
             <div className="field">
               <label htmlFor="v-status">Status</label>

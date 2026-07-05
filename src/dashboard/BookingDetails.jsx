@@ -22,6 +22,8 @@ import {
 import { STATUS_CHIP, PAY_CHIP } from "./Bookings";
 import { downloadAgreement } from "./pdf";
 import { toast } from "./toastStore";
+import DatePicker from "./DatePicker";
+import Dropdown from "../components/Dropdown";
 import mpesaLogo from "../assets/mpesa-logo.webp";
 import "./fleet.css";
 import "./bookings.css";
@@ -29,6 +31,12 @@ import "./bookings.css";
 const fmtAmount = (n) => n.toLocaleString("en-KE");
 
 const FUEL_LEVELS = ["Full", "3/4", "1/2", "1/4", "Reserve"];
+
+// half-hour steps for the return time
+const TIMES = Array.from({ length: 48 }, (_, i) => {
+  const h = String(Math.floor(i / 2)).padStart(2, "0");
+  return `${h}:${i % 2 ? "30" : "00"}`;
+});
 
 const STATUS_TOAST = {
   Confirmed: "Booking confirmed.",
@@ -49,6 +57,10 @@ export default function BookingDetails() {
   const policy = useSyncExternalStore(subscribePolicy, getPolicy);
   const { ref } = useParams();
   const [cancelling, setCancelling] = useState(false);
+  const [retDate, setRetDate] = useState(null);
+  const [retTime, setRetTime] = useState("10:00");
+  const [outFuel, setOutFuel] = useState("Full");
+  const [inFuel, setInFuel] = useState("Full");
 
   const b = getBooking(decodeURIComponent(ref));
 
@@ -92,7 +104,7 @@ export default function BookingDetails() {
   function handleCheckIn(e) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
-    const returned = new Date(f.get("returnedAt"));
+    const returned = new Date(`${retDate || b.dropoff}T${retTime}:00`);
     const due = new Date(`${b.dropoff}T${String(RETURN_HOUR).padStart(2, "0")}:00:00`);
     const lateHours = Math.max(0, Math.ceil((returned - due) / 3600000));
     const pen = lateHours * policy.lateFeePerHour;
@@ -253,11 +265,13 @@ export default function BookingDetails() {
                   </div>
                   <div className="field">
                     <label htmlFor="ho-fuel">Fuel level</label>
-                    <select id="ho-fuel" name="fuel" defaultValue="Full">
-                      {FUEL_LEVELS.map((l) => (
-                        <option key={l}>{l}</option>
-                      ))}
-                    </select>
+                    <Dropdown
+                      id="ho-fuel"
+                      name="fuel"
+                      value={outFuel}
+                      onChange={setOutFuel}
+                      options={FUEL_LEVELS}
+                    />
                   </div>
                   <div className="field form-full">
                     <label htmlFor="ho-notes">Condition notes</label>
@@ -297,17 +311,33 @@ export default function BookingDetails() {
                   </div>
                   <div className="field">
                     <label htmlFor="hi-fuel">Fuel level</label>
-                    <select id="hi-fuel" name="fuel" defaultValue="Full">
-                      {FUEL_LEVELS.map((l) => (
-                        <option key={l}>{l}</option>
-                      ))}
-                    </select>
+                    <Dropdown
+                      id="hi-fuel"
+                      name="fuel"
+                      value={inFuel}
+                      onChange={setInFuel}
+                      options={FUEL_LEVELS}
+                    />
                   </div>
                   <div className="field">
-                    <label htmlFor="hi-at">Returned at</label>
-                    <input id="hi-at" name="returnedAt" type="datetime-local" defaultValue={`${b.dropoff}T10:00`} required />
+                    <label htmlFor="hi-at">Return date</label>
+                    <DatePicker
+                      id="hi-at"
+                      value={retDate || b.dropoff}
+                      onChange={setRetDate}
+                      minDate={b.pickup}
+                    />
                   </div>
                   <div className="field">
+                    <label htmlFor="hi-time">Return time</label>
+                    <Dropdown
+                      id="hi-time"
+                      value={retTime}
+                      onChange={setRetTime}
+                      options={TIMES}
+                    />
+                  </div>
+                  <div className="field form-full">
                     <label htmlFor="hi-notes">Return notes</label>
                     <input id="hi-notes" name="notes" type="text" placeholder="New damage, missing items" />
                   </div>
