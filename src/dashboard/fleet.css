@@ -63,8 +63,8 @@
 }
 
 .seg button {
-  padding: 9px 16px;
-  font-size: 13px;
+  padding: 6px 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--ink-soft);
   transition: box-shadow 0.15s var(--ease), color 0.15s var(--ease);
@@ -91,6 +91,24 @@
 .toolbar-btn svg {
   width: 13px;
   height: 13px;
+}
+
+/* top-of-page primary action, right-aligned for quick reach */
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.page-action-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  gap: 5px;
+}
+
+.page-action-btn svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* ---- Table extras ---- */

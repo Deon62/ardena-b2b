@@ -20,6 +20,15 @@
   margin-bottom: 20px;
 }
 
+/* keep the top row compact so the list stays close to the fold */
+.bookings-top .chart-card {
+  padding: 20px;
+}
+
+.bookings-top .collections-chart svg {
+  max-height: 190px;
+}
+
 @media (max-width: 1100px) {
   .bookings-top {
     grid-template-columns: 1fr;
@@ -93,10 +102,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  aspect-ratio: 1;
-  min-height: 30px;
-  font-size: 12.5px;
+  gap: 2px;
+  min-height: 26px;
+  font-size: 12px;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
@@ -132,8 +140,8 @@
 .bk-cal-foot {
   display: flex;
   gap: 18px;
-  margin-top: 14px;
-  padding-top: 14px;
+  margin-top: 10px;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
 }
 
