@@ -56,6 +56,13 @@ export default function Bookings() {
     });
   }, [bookings, query, status]);
 
+  // stable display number per booking (1, 2, 3…) by list order
+  const bookingNo = useMemo(() => {
+    const m = new Map();
+    bookings.forEach((b, i) => m.set(b.ref, i + 1));
+    return m;
+  }, [bookings]);
+
   const stats = useMemo(() => {
     const today = todayLocalISO();
     const count = (s) => bookings.filter((b) => b.status === s).length;
@@ -169,8 +176,7 @@ export default function Bookings() {
               <th>Customer</th>
               <th>Vehicle</th>
               <th>Dates</th>
-              <th className="num">Amount</th>
-              <th>Payment</th>
+              <th className="num rate-col">Amount</th>
               <th>Status</th>
               <th className="actions-col">Actions</th>
             </tr>
@@ -181,8 +187,10 @@ export default function Bookings() {
               return (
                 <tr key={b.ref}>
                   <td>
-                    <p className="strong">{b.customer}</p>
-                    <p className="cell-sub">{b.ref}</p>
+                    <div className="row-name">
+                      <span className="row-no">{bookingNo.get(b.ref)}</span>
+                      <span className="strong">{b.customer}</span>
+                    </div>
                   </td>
                   <td>
                     <p className="strong">{b.vehicle}</p>
@@ -194,10 +202,7 @@ export default function Bookings() {
                       {days} day{days > 1 ? "s" : ""}
                     </p>
                   </td>
-                  <td className="num">{fmtAmount(days * b.rate)}</td>
-                  <td>
-                    <span className={`chip ${PAY_CHIP[b.payment]}`}>{b.payment}</span>
-                  </td>
+                  <td className="num rate-col">{fmtAmount(days * b.rate)}</td>
                   <td>
                     <span className={`chip ${STATUS_CHIP[b.status]}`}>{b.status}</span>
                   </td>
