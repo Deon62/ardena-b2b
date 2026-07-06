@@ -5,6 +5,8 @@ import {
   getOnboarding,
   dismissOnboarding,
 } from "./onboardingStore";
+import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
+import { subscribe as subscribeBookings, getBookings } from "./bookingsStore";
 import "./onboarding.css";
 
 const STEPS = [
@@ -42,9 +44,19 @@ const STEPS = [
 
 export default function OnboardingChecklist() {
   const state = useSyncExternalStore(subscribe, getOnboarding);
+  const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
+  const bookings = useSyncExternalStore(subscribeBookings, getBookings);
   if (state.dismissed) return null;
 
-  const done = STEPS.filter((s) => state[s.key]).length;
+  // fleet/booking steps track real data so the checklist is truthful in
+  // both the demo and empty preview; the rest are flag-based
+  const isStepDone = (key) => {
+    if (key === "vehicle") return vehicles.length > 0;
+    if (key === "booking") return bookings.length > 0;
+    return state[key];
+  };
+
+  const done = STEPS.filter((s) => isStepDone(s.key)).length;
   if (done === STEPS.length) return null; // fully set up, nothing to nag about
 
   return (
@@ -77,7 +89,7 @@ export default function OnboardingChecklist() {
 
       <ol className="onboard-steps">
         {STEPS.map((s) => {
-          const isDone = state[s.key];
+          const isDone = isStepDone(s.key);
           return (
             <li className={isDone ? "done" : ""} key={s.key}>
               <span className="onboard-check" aria-hidden="true">

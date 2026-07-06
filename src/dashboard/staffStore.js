@@ -1,6 +1,7 @@
 // In-memory staff store (mock backend), same pattern as the other stores.
 // Seats are unlimited on the Fleet plan.
 import { markStep } from "./onboardingStore";
+import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
 
 export const ROLES = ["Manager", "Booking agent", "Finance", "Viewer"];
 
@@ -23,6 +24,9 @@ let staff = [
 
 let nextId = 7;
 
+// a brand-new business is just its owner
+const OWNER_ONLY = staff.slice(0, 1);
+
 const listeners = new Set();
 
 function emit() {
@@ -34,8 +38,10 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+subscribeDemo(emit);
+
 export function getStaff() {
-  return staff;
+  return getSampleData() ? staff : OWNER_ONLY;
 }
 
 export function findByEmail(email) {

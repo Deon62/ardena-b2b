@@ -1,5 +1,8 @@
 // In-memory notifications store (mock backend). Items reference real records
 // in the other stores so links land somewhere meaningful.
+import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
+
+const EMPTY = [];
 
 let notifications = [
   { id: 1, kind: "payment", title: "Payment received, KES 36,000", meta: "James Otieno paid for BK-2434 via M-Pesa.", time: "Today, 08:56", read: false, to: "/dashboard/bookings/BK-2434" },
@@ -25,8 +28,10 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+subscribeDemo(emit);
+
 export function getNotifications() {
-  return notifications;
+  return getSampleData() ? notifications : EMPTY;
 }
 
 export function markRead(id) {

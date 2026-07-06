@@ -7,6 +7,7 @@ import {
   expiringSoon,
 } from "./fleetStore";
 import { toast } from "./toastStore";
+import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./fleet.css";
 
 const STATUSES = ["All", "Available", "On booking", "In maintenance"];
@@ -69,6 +70,20 @@ export default function Fleet() {
         </article>
       </div>
 
+      {vehicles.length === 0 ? (
+        <section className="panel-card">
+          <EmptyState
+            icon={EMPTY_ICONS.fleet}
+            title="No vehicles yet"
+            message="Add your first vehicle to start taking bookings. It's bookable the moment you save it."
+            action={
+              <Link to="/dashboard/fleet/new" className="btn btn-primary">
+                Add your first vehicle
+              </Link>
+            }
+          />
+        </section>
+      ) : (
       <section className="panel-card">
         <div className="fleet-toolbar">
           <div className="search">
@@ -208,6 +223,7 @@ export default function Fleet() {
           </div>
         )}
       </section>
+      )}
     </>
   );
 }

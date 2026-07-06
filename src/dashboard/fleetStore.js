@@ -1,6 +1,9 @@
 // In-memory fleet store (mock backend). Pages subscribe via useSyncExternalStore,
 // so add/delete actions reflect everywhere until a real API replaces this.
 import { markStep } from "./onboardingStore";
+import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
+
+const EMPTY = [];
 
 let vehicles = [
   { name: "Toyota Prado", plate: "KDL 482A", cat: "SUV", rate: 12000, util: 82, ins: "12 Jul 2026", inspection: "4 Feb 2027", added: "14 Mar 2025", status: "On booking", notes: "" },
@@ -28,8 +31,11 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+// flipping the preview toggle re-renders every fleet consumer
+subscribeDemo(emit);
+
 export function getVehicles() {
-  return vehicles;
+  return getSampleData() ? vehicles : EMPTY;
 }
 
 export function getVehicle(plate) {

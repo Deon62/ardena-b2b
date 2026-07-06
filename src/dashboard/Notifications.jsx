@@ -6,6 +6,7 @@ import {
   markRead,
   markAllRead,
 } from "./notificationsStore";
+import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./fleet.css";
 import "./bookings.css";
 import "./workspace.css";
@@ -86,6 +87,7 @@ export default function Notifications() {
           </button>
         </div>
 
+        {filtered.length > 0 && (
         <table className="data-table">
           <thead>
             <tr>
@@ -135,11 +137,15 @@ export default function Notifications() {
             ))}
           </tbody>
         </table>
+        )}
 
         {filtered.length === 0 && (
-          <div className="empty-block fleet-empty">
-            <p>Nothing here, you're all caught up.</p>
-          </div>
+          <EmptyState
+            compact
+            icon={EMPTY_ICONS.notifications}
+            title="You're all caught up"
+            message="New activity across bookings, payments, verifications and your team will show up here."
+          />
         )}
       </section>
     </>

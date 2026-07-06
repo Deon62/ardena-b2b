@@ -1,5 +1,8 @@
 // In-memory bookings store (mock backend), same pattern as fleetStore.
 import { markStep } from "./onboardingStore";
+import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
+
+const EMPTY = [];
 // Pages subscribe via useSyncExternalStore, so create/status actions
 // reflect everywhere until a real API replaces this.
 // Lifecycle: Pending → Confirmed → Active → Completed, or Cancelled early.
@@ -73,8 +76,10 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+subscribeDemo(emit);
+
 export function getBookings() {
-  return bookings;
+  return getSampleData() ? bookings : EMPTY;
 }
 
 export function getBooking(ref) {

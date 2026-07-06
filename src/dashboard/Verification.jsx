@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { fmtDate } from "./bookingsStore";
@@ -10,6 +10,8 @@ import {
   WIDGET_URL,
 } from "./verificationsStore";
 import { markStep } from "./onboardingStore";
+import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
+import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./fleet.css";
 import "./bookings.css";
 import "./verification.css";
@@ -21,18 +23,23 @@ const OUTCOMES = [
   { key: "Abandoned", cls: "abandoned" },
 ];
 
+const NO_SESSIONS = [];
+
 export default function Verification() {
   const [copied, setCopied] = useState(false);
+  const sampleData = useSyncExternalStore(subscribeDemo, getSampleData);
+  const sessions = sampleData ? SESSIONS : NO_SESSIONS;
+  const wallet = sampleData ? WALLET_BALANCE : 0;
 
   const stats = useMemo(() => {
-    const thisMonth = SESSIONS.filter((s) => s.date.startsWith("2026-07")).length;
-    const verified = SESSIONS.filter((s) => s.status === "Verified").length;
-    const inProgress = SESSIONS.filter((s) => s.status === "In progress").length;
+    const thisMonth = sessions.filter((s) => s.date.startsWith("2026-07")).length;
+    const verified = sessions.filter((s) => s.status === "Verified").length;
+    const inProgress = sessions.filter((s) => s.status === "In progress").length;
     const counts = Object.fromEntries(
-      OUTCOMES.map((o) => [o.key, SESSIONS.filter((s) => s.status === o.key).length])
+      OUTCOMES.map((o) => [o.key, sessions.filter((s) => s.status === o.key).length])
     );
     const reasons = {};
-    SESSIONS.forEach((s) => {
+    sessions.forEach((s) => {
       if (s.status === "Failed" && s.reason) {
         reasons[s.reason] = (reasons[s.reason] || 0) + 1;
       }
@@ -40,11 +47,11 @@ export default function Verification() {
     return {
       thisMonth,
       inProgress,
-      conversion: Math.round((verified / SESSIONS.length) * 100),
+      conversion: sessions.length ? Math.round((verified / sessions.length) * 100) : 0,
       counts,
       reasons: Object.entries(reasons).sort((a, b) => b[1] - a[1]),
     };
-  }, []);
+  }, [sessions]);
 
   function copyLink() {
     navigator.clipboard.writeText(WIDGET_URL).then(() => {
@@ -54,7 +61,7 @@ export default function Verification() {
     });
   }
 
-  const recent = SESSIONS.slice(0, 6);
+  const recent = sessions.slice(0, 6);
 
   return (
     <>
@@ -68,9 +75,9 @@ export default function Verification() {
         </article>
         <article className="stat-card">
           <p className="stat-label">Wallet balance</p>
-          <p className="stat-value">KES {WALLET_BALANCE.toLocaleString("en-KE")}</p>
+          <p className="stat-value">KES {wallet.toLocaleString("en-KE")}</p>
           <p className="stat-note">
-            ≈ {Math.floor(WALLET_BALANCE / CHECK_PRICE)} checks ·{" "}
+            ≈ {Math.floor(wallet / CHECK_PRICE)} checks ·{" "}
             <Link className="spec-link" to="/dashboard/billing">
               top up
             </Link>
@@ -96,36 +103,47 @@ export default function Verification() {
               <p>How renters fare in your Dojah verification flow</p>
             </header>
 
-            <div className="outcome-rows">
-              {OUTCOMES.map((o) => (
-                <div className="outcome-row" key={o.key}>
-                  <span className="outcome-label">{o.key}</span>
-                  <span className="outcome-bar">
-                    <i
-                      className={`bar-${o.cls}`}
-                      style={{ width: `${(stats.counts[o.key] / SESSIONS.length) * 100}%` }}
-                    />
-                  </span>
-                  <span className="outcome-count">{stats.counts[o.key]}</span>
+            {sessions.length === 0 ? (
+              <EmptyState
+                compact
+                icon={EMPTY_ICONS.chart}
+                title="No sessions to analyse yet"
+                message="Once renters start running through your widget, their pass, fail and drop-off rates land here."
+              />
+            ) : (
+              <>
+                <div className="outcome-rows">
+                  {OUTCOMES.map((o) => (
+                    <div className="outcome-row" key={o.key}>
+                      <span className="outcome-label">{o.key}</span>
+                      <span className="outcome-bar">
+                        <i
+                          className={`bar-${o.cls}`}
+                          style={{ width: `${(stats.counts[o.key] / sessions.length) * 100}%` }}
+                        />
+                      </span>
+                      <span className="outcome-count">{stats.counts[o.key]}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            <div className="reason-block">
-              <p className="reason-title">Top failure reasons</p>
-              <ul className="reason-list">
-                {stats.reasons.map(([reason, count]) => (
-                  <li key={reason}>
-                    <span>{reason}</span>
-                    <span className="mini-amount">{count}</span>
-                  </li>
-                ))}
-                <li>
-                  <span>Top drop-off step, selfie &amp; liveness</span>
-                  <span className="mini-amount">{stats.counts.Abandoned}</span>
-                </li>
-              </ul>
-            </div>
+                <div className="reason-block">
+                  <p className="reason-title">Top failure reasons</p>
+                  <ul className="reason-list">
+                    {stats.reasons.map(([reason, count]) => (
+                      <li key={reason}>
+                        <span>{reason}</span>
+                        <span className="mini-amount">{count}</span>
+                      </li>
+                    ))}
+                    <li>
+                      <span>Top drop-off step, selfie &amp; liveness</span>
+                      <span className="mini-amount">{stats.counts.Abandoned}</span>
+                    </li>
+                  </ul>
+                </div>
+              </>
+            )}
           </section>
 
           <section className="panel-card">
@@ -134,10 +152,20 @@ export default function Verification() {
                 <h2>Recent sessions</h2>
                 <p>Latest renters through the widget</p>
               </header>
-              <Link to="/dashboard/verification/all" className="btn btn-ghost toolbar-btn">
-                All verifications
-              </Link>
+              {sessions.length > 0 && (
+                <Link to="/dashboard/verification/all" className="btn btn-ghost toolbar-btn">
+                  All verifications
+                </Link>
+              )}
             </div>
+            {sessions.length === 0 ? (
+              <EmptyState
+                compact
+                icon={EMPTY_ICONS.verification}
+                title="No renters verified yet"
+                message="Scan the QR with a renter's phone, or send them the widget link, to run your first ID check."
+              />
+            ) : (
             <table className="data-table">
               <thead>
                 <tr>
@@ -177,6 +205,7 @@ export default function Verification() {
                 ))}
               </tbody>
             </table>
+            )}
           </section>
         </div>
 

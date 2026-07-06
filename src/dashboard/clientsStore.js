@@ -1,6 +1,9 @@
 // In-memory clients store (mock backend), same pattern as fleetStore and
 // bookingsStore. Clients are the business's renters, booking counts and
 // spend are derived live from bookingsStore, so the two stay in sync.
+import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
+
+const EMPTY = [];
 
 let clients = [
   { id: "CL-214", name: "Esther Nyambura", phone: "0729 884 615", email: "enyambura@gmail.com", idType: "National ID", verification: "Failed", joined: "2026-07-03", notes: "ID number mismatch on first check, asked to resubmit." },
@@ -30,8 +33,10 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
+subscribeDemo(emit);
+
 export function getClients() {
-  return clients;
+  return getSampleData() ? clients : EMPTY;
 }
 
 export function getClient(id) {

@@ -10,6 +10,7 @@ import {
 import { PAY_CHIP } from "./Bookings";
 import CollectionsTrend from "./charts/CollectionsTrend";
 import Dropdown from "../components/Dropdown";
+import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import { toast } from "./toastStore";
 import mpesaLogo from "../assets/mpesa-logo.webp";
 import "./fleet.css";
@@ -104,7 +105,15 @@ export default function Payments() {
             <h2>Collections</h2>
             <p>KES '000 per week, last 8 weeks</p>
           </header>
-          <CollectionsTrend />
+          {bookings.length === 0 ? (
+            <EmptyState
+              icon={EMPTY_ICONS.chart}
+              title="No collections yet"
+              message="Once customers pay for their bookings via M-Pesa, your weekly collections chart builds up here."
+            />
+          ) : (
+            <CollectionsTrend />
+          )}
         </section>
 
         <div className="payments-side">
@@ -116,7 +125,9 @@ export default function Payments() {
 
             {promptable.length === 0 ? (
               <p className="prompt-empty">
-                Nothing outstanding, every live booking is paid up.
+                {bookings.length === 0
+                  ? "No live bookings yet. Create a booking, then prompt the customer to pay."
+                  : "Nothing outstanding, every live booking is paid up."}
               </p>
             ) : (
               <>
@@ -183,22 +194,26 @@ export default function Payments() {
               </Link>
             </header>
 
-            <ul className="mini-list">
-              {settled.map((b) => (
-                <li key={b.ref}>
-                  <div>
-                    <p className="strong">{b.customer}</p>
-                    <p className="cell-sub">{receiptFor(b.ref)}</p>
-                  </div>
-                  <div className="mini-pay-right">
-                    <span className="mini-amount">
-                      KES {fmtAmount(bookingAmount(b))}
-                    </span>
-                    <span className={`chip ${PAY_CHIP[b.payment]}`}>{b.payment}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {settled.length === 0 ? (
+              <p className="prompt-empty">No payments received yet.</p>
+            ) : (
+              <ul className="mini-list">
+                {settled.map((b) => (
+                  <li key={b.ref}>
+                    <div>
+                      <p className="strong">{b.customer}</p>
+                      <p className="cell-sub">{receiptFor(b.ref)}</p>
+                    </div>
+                    <div className="mini-pay-right">
+                      <span className="mini-amount">
+                        KES {fmtAmount(bookingAmount(b))}
+                      </span>
+                      <span className={`chip ${PAY_CHIP[b.payment]}`}>{b.payment}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
       </div>

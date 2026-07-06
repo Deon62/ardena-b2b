@@ -7,6 +7,7 @@ import {
   rentalDays,
 } from "./bookingsStore";
 import AvailabilityCalendar from "./AvailabilityCalendar";
+import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./fleet.css";
 import "./bookings.css";
 
@@ -87,6 +88,21 @@ export default function Bookings() {
         </article>
       </div>
 
+      {bookings.length === 0 ? (
+        <section className="panel-card">
+          <EmptyState
+            icon={EMPTY_ICONS.bookings}
+            title="No bookings yet"
+            message="Reserve a car for a customer and it shows up here. New bookings start as pending until you confirm them."
+            action={
+              <Link to="/dashboard/bookings/new" className="btn btn-primary">
+                Create a booking
+              </Link>
+            }
+          />
+        </section>
+      ) : (
+      <>
       <div className="view-switch">
         <div className="seg" role="group" aria-label="Switch view">
           <button
@@ -202,6 +218,8 @@ export default function Bookings() {
           </div>
         )}
       </section>
+      )}
+      </>
       )}
     </>
   );

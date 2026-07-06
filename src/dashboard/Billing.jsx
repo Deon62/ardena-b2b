@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
 import { CHECK_PRICE, WALLET_BALANCE } from "./verificationsStore";
+import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
+import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./fleet.css";
 import "./bookings.css";
 import "./workspace.css";
@@ -35,16 +37,21 @@ const fmtAmount = (n) => n.toLocaleString("en-KE");
 
 export default function Billing() {
   const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
+  const sampleData = useSyncExternalStore(subscribeDemo, getSampleData);
+
+  const invoices = sampleData ? INVOICES : [];
+  const checksUsed = sampleData ? CHECKS_USED : 0;
+  const wallet = sampleData ? WALLET_BALANCE : 0;
 
   const monthly = Math.max(PLAN.minimum, vehicles.length * PLAN.launchRate);
   const standardMonthly = Math.max(PLAN.minimum, vehicles.length * PLAN.rate);
-  const due = INVOICES.find((i) => i.status === "Due");
+  const due = invoices.find((i) => i.status === "Due");
 
   const usage = [
     { label: `Vehicles on plan × KES ${PLAN.launchRate}`, value: vehicles.length, amount: `KES ${fmtAmount(monthly)}` },
-    { label: "Renter checks used", value: CHECKS_USED, amount: `KES ${fmtAmount(CHECKS_USED * CHECK_PRICE)} from wallet` },
-    { label: "M-Pesa prompts sent", value: 112, amount: "Included" },
-    { label: "Staff seats", value: 6, amount: "Included" },
+    { label: "Renter checks used", value: checksUsed, amount: `KES ${fmtAmount(checksUsed * CHECK_PRICE)} from wallet` },
+    { label: "M-Pesa prompts sent", value: sampleData ? 112 : 0, amount: "Included" },
+    { label: "Staff seats", value: sampleData ? 6 : 1, amount: "Included" },
   ];
 
   return (
@@ -66,9 +73,9 @@ export default function Billing() {
         </article>
         <article className="stat-card">
           <p className="stat-label">Check wallet</p>
-          <p className="stat-value">KES {fmtAmount(WALLET_BALANCE)}</p>
+          <p className="stat-value">KES {fmtAmount(wallet)}</p>
           <p className="stat-note">
-            ≈ {Math.floor(WALLET_BALANCE / CHECK_PRICE)} renter checks left
+            ≈ {Math.floor(wallet / CHECK_PRICE)} renter checks left
           </p>
         </article>
         <article className="stat-card">
@@ -105,6 +112,14 @@ export default function Billing() {
               <h2>Invoices &amp; top-ups</h2>
               <p>Your billing history on Ardena</p>
             </header>
+            {invoices.length === 0 ? (
+              <EmptyState
+                compact
+                icon={EMPTY_ICONS.payments}
+                title="No invoices yet"
+                message="Your first monthly invoice is generated once your trial ends and vehicles are on the plan."
+              />
+            ) : (
             <table className="data-table">
               <thead>
                 <tr>
@@ -116,7 +131,7 @@ export default function Billing() {
                 </tr>
               </thead>
               <tbody>
-                {INVOICES.map((inv) => (
+                {invoices.map((inv) => (
                   <tr key={inv.ref}>
                     <td>
                       <p className="strong">{inv.ref}</p>
@@ -149,6 +164,7 @@ export default function Billing() {
                 ))}
               </tbody>
             </table>
+            )}
           </section>
         </div>
 
@@ -183,9 +199,9 @@ export default function Billing() {
               <h2>Check wallet</h2>
               <p>Prepaid renter verifications</p>
             </header>
-            <p className="util-hero">KES {fmtAmount(WALLET_BALANCE)}</p>
+            <p className="util-hero">KES {fmtAmount(wallet)}</p>
             <p className="invoice-sub">
-              ≈ {Math.floor(WALLET_BALANCE / CHECK_PRICE)} checks at KES {CHECK_PRICE} each
+              ≈ {Math.floor(wallet / CHECK_PRICE)} checks at KES {CHECK_PRICE} each
             </p>
             <a
               className="btn btn-ghost pay-btn"

@@ -20,6 +20,7 @@ import VerifiedBadge from "../components/VerifiedBadge";
 import usePageTitle from "../hooks/usePageTitle";
 import PageSkeleton from "./PageSkeleton";
 import Toasts from "./Toasts";
+import DemoToggle from "./DemoToggle";
 import "./dashboard.css";
 
 export default function DashboardLayout() {
@@ -153,6 +154,7 @@ export default function DashboardLayout() {
       </main>
 
       <Toasts />
+      <DemoToggle />
     </div>
   );
 }

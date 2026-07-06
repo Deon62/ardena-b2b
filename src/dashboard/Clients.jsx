@@ -7,6 +7,7 @@ import {
   fmtDate,
   rentalDays,
 } from "./bookingsStore";
+import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./fleet.css";
 import "./bookings.css";
 
@@ -90,6 +91,20 @@ export default function Clients() {
         </article>
       </div>
 
+      {clients.length === 0 ? (
+        <section className="panel-card">
+          <EmptyState
+            icon={EMPTY_ICONS.clients}
+            title="No clients yet"
+            message="Every customer you book a car for gets a profile here, with their bookings, payments and verification history."
+            action={
+              <Link to="/dashboard/bookings/new" className="btn btn-primary">
+                Create a booking
+              </Link>
+            }
+          />
+        </section>
+      ) : (
       <section className="panel-card">
         <div className="fleet-toolbar">
           <div className="search">
@@ -176,6 +191,7 @@ export default function Clients() {
           </div>
         )}
       </section>
+      )}
     </>
   );
 }
