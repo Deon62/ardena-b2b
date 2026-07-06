@@ -101,10 +101,46 @@
   border-color: var(--brand);
 }
 
-/* ---- Request access ---- */
+/* ---- Request access: intro left, form card right ---- */
 
-.auth-card.request-card {
-  max-width: 640px;
+.request-split {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: clamp(32px, 5vw, 64px);
+  align-items: center;
+  width: 100%;
+  max-width: 900px;
+  animation: rise 0.5s var(--ease) both;
+}
+
+.request-intro {
+  text-align: left;
+}
+
+.request-intro h1 {
+  font-size: clamp(28px, 3.2vw, 38px);
+  margin-bottom: 14px;
+}
+
+.request-intro > p {
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 360px;
+}
+
+.request-form {
+  background: var(--bg);
+  box-shadow: var(--neo-out);
+  padding: clamp(24px, 3vw, 34px);
+}
+
+@media (max-width: 820px) {
+  .request-split {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+    gap: 28px;
+  }
 }
 
 .auth-row {
@@ -131,6 +167,11 @@
   font-size: 12.5px;
   color: var(--ink-mute);
   line-height: 1.55;
+}
+
+.request-intro .auth-switch {
+  text-align: left;
+  margin-top: 22px;
 }
 
 .request-check {

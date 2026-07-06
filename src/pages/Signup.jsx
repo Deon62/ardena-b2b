@@ -57,25 +57,28 @@ export default function Signup() {
         <Logo />
       </header>
 
-      <main className="auth-card request-card">
-        <h1>Request access</h1>
-        <p>
-          Ardena for Business is for verified rental businesses only. Tell us
-          about yours and we'll send your logins within 24 hours.
-        </p>
+      <main className="request-split">
+        <div className="request-intro">
+          <h1>Request access</h1>
+          <p>
+            Ardena for Business is for verified rental businesses only. Tell us
+            about yours and we'll send your logins within 24 hours.
+          </p>
+          <p className="request-note">
+            Every business on Ardena is verified before any logins go out, so
+            renters and partners know your fleet is real.
+          </p>
+          <p className="auth-switch">
+            Already have logins? <Link to="/login">Sign in</Link>
+          </p>
+        </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className="auth-form request-form" onSubmit={handleSubmit}>
           <div className="auth-row">
             <div className="field">
               <label htmlFor="r-business">Business name</label>
               <input id="r-business" type="text" placeholder="Acme Car Hire Ltd" autoComplete="organization" required />
             </div>
-            <div className="field">
-              <label htmlFor="r-reg">Registration number</label>
-              <input id="r-reg" type="text" placeholder="PVT-ABC123XYZ" required />
-            </div>
-          </div>
-          <div className="auth-row">
             <div className="field">
               <label htmlFor="r-fleet">Fleet size</label>
               <Dropdown
@@ -85,45 +88,35 @@ export default function Signup() {
                 options={FLEET_SIZES}
               />
             </div>
+          </div>
+          <div className="auth-row">
             <div className="field">
               <label htmlFor="r-town">Town / county</label>
               <input id="r-town" type="text" placeholder="Nakuru" required />
             </div>
-          </div>
-          <div className="auth-row">
             <div className="field">
               <label htmlFor="r-name">Your name</label>
               <input id="r-name" type="text" placeholder="Wanjiku Kamau" autoComplete="name" required />
             </div>
+          </div>
+          <div className="auth-row">
             <div className="field">
               <label htmlFor="r-email">Work email</label>
               <input id="r-email" type="email" placeholder="you@company.co.ke" autoComplete="email" required />
             </div>
-          </div>
-          <div className="auth-row">
             <div className="field">
               <label htmlFor="r-phone">Phone (WhatsApp)</label>
               <input id="r-phone" type="tel" placeholder="0700 000 000" autoComplete="tel" required />
             </div>
-            <div className="field">
-              <label htmlFor="r-web">Website or Instagram · optional</label>
-              <input id="r-web" type="text" placeholder="acmecarhire.co.ke" />
-            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="r-web">Website or Instagram · optional</label>
+            <input id="r-web" type="text" placeholder="acmecarhire.co.ke" />
           </div>
           <button type="submit" className="btn btn-primary">
             Request access
           </button>
         </form>
-
-        <p className="request-note">
-          Every business on Ardena is verified. We check registration and
-          director details before any logins go out, so renters and partners
-          know your fleet is real.
-        </p>
-
-        <p className="auth-switch">
-          Already have logins? <Link to="/login">Sign in</Link>
-        </p>
       </main>
     </div>
   );
