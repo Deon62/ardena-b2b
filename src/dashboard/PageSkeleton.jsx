@@ -298,8 +298,26 @@ export default function PageSkeleton({ path }) {
     );
   }
 
-  // ---- Verification / Payments / Billing: KPIs + card grid
-  if (["verification", "payments", "billing"].includes(section)) {
+  // ---- Payments (finance): KPIs + trend chart + donut + processed table
+  if (section === "payments") {
+    return (
+      <div aria-hidden="true">
+        <StatRow />
+        <div className="payments-grid">
+          {[0, 1].map((i) => (
+            <section className="chart-card" key={i}>
+              <CardHead />
+              <span className="sk sk-block" />
+            </section>
+          ))}
+        </div>
+        <TableCard rows={6} />
+      </div>
+    );
+  }
+
+  // ---- Verification / Billing: KPIs + card grid
+  if (["verification", "billing"].includes(section)) {
     return (
       <div aria-hidden="true">
         <StatRow />

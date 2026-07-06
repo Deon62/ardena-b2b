@@ -1,18 +1,10 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
-import {
-  subscribe,
-  getBookings,
-  setPayment,
-  fmtRange,
-  rentalDays,
-} from "./bookingsStore";
+import { subscribe, getBookings, rentalDays } from "./bookingsStore";
 import { PAY_CHIP } from "./Bookings";
-import CollectionsTrend from "./charts/CollectionsTrend";
-import Dropdown from "../components/Dropdown";
+import CollectionsArea from "./charts/CollectionsArea";
+import PaymentDonut from "./charts/PaymentDonut";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
-import { toast } from "./toastStore";
-import mpesaLogo from "../assets/mpesa-logo.webp";
 import "./fleet.css";
 import "./bookings.css";
 import "./payments.css";
@@ -27,18 +19,19 @@ const bookingAmount = (b) => rentalDays(b.pickup, b.dropoff) * b.rate;
 
 export default function Payments() {
   const bookings = useSyncExternalStore(subscribe, getBookings);
-  const [selectedRef, setSelectedRef] = useState("");
 
   const stats = useMemo(() => {
     let collected = 0;
     let outstanding = 0;
     let refunded = 0;
-    let prompts = 0;
+    let paidCount = 0;
     bookings.forEach((b) => {
       const amount = bookingAmount(b);
-      if (b.payment === "Paid") collected += amount;
+      if (b.payment === "Paid") {
+        collected += amount;
+        paidCount += 1;
+      }
       if (b.payment === "Refunded") refunded += amount;
-      if (b.payment === "Prompt sent") prompts += 1;
       if (
         (b.payment === "Unpaid" || b.payment === "Prompt sent") &&
         b.status !== "Cancelled"
@@ -46,177 +39,139 @@ export default function Payments() {
         outstanding += amount;
       }
     });
-    return { collected, outstanding, refunded, prompts };
+    return { collected, outstanding, refunded, net: collected - refunded, paidCount };
   }, [bookings]);
 
-  // bookings you can still prompt: money owed on a live booking
-  const promptable = useMemo(
-    () =>
-      bookings.filter(
-        (b) =>
-          (b.payment === "Unpaid" || b.payment === "Prompt sent") &&
-          b.status !== "Cancelled" &&
-          b.status !== "Completed"
-      ),
-    [bookings]
+  const donutSegments = [
+    { label: "Collected", value: stats.collected, color: "#0b7a37" },
+    { label: "Outstanding", value: stats.outstanding, color: "#d97706" },
+    { label: "Refunded", value: stats.refunded, color: "#94a3b8" },
+  ];
+
+  // processed cash: settled transactions, newest first
+  const processed = bookings.filter(
+    (b) => b.payment === "Paid" || b.payment === "Refunded"
   );
-
-  const selected =
-    promptable.find((b) => b.ref === selectedRef) ?? promptable[0] ?? null;
-
-  function sendPrompt() {
-    if (!selected) return;
-    setPayment(selected.ref, "Prompt sent");
-    toast(`STK push sent to ${selected.customer} (${selected.phone}).`);
-  }
-
-  const settled = bookings
-    .filter((b) => b.payment === "Paid" || b.payment === "Refunded")
-    .slice(0, 4);
+  const recent = processed.slice(0, 8);
 
   return (
     <>
-      <div className="stat-grid fleet-stats">
+      <div className="stat-grid finance-stats">
         <article className="stat-card">
           <p className="stat-label">Collected</p>
           <p className="stat-value">KES {fmtAmount(stats.collected)}</p>
-          <p className="stat-note">paid via M-Pesa</p>
+          <p className="stat-note">{stats.paidCount} payments via M-Pesa</p>
         </article>
         <article className="stat-card">
           <p className="stat-label">Outstanding</p>
           <p className="stat-value">KES {fmtAmount(stats.outstanding)}</p>
-          <p className="stat-note">on live bookings</p>
-        </article>
-        <article className="stat-card">
-          <p className="stat-label">Prompts awaiting</p>
-          <p className="stat-value">{stats.prompts}</p>
-          <p className="stat-note">STK pushes not yet paid</p>
+          <p className="stat-note">owed on live bookings</p>
         </article>
         <article className="stat-card">
           <p className="stat-label">Refunded</p>
           <p className="stat-value">KES {fmtAmount(stats.refunded)}</p>
           <p className="stat-note">from cancelled bookings</p>
         </article>
+        <article className="stat-card">
+          <p className="stat-label">Net collected</p>
+          <p className="stat-value">KES {fmtAmount(stats.net)}</p>
+          <p className="stat-note">after refunds</p>
+        </article>
       </div>
 
       <div className="payments-grid">
         <section className="chart-card">
           <header className="card-head">
-            <h2>Collections</h2>
-            <p>KES '000 per week, last 8 weeks</p>
+            <h2>Collections over time</h2>
+            <p>KES '000 settled per week, last 10 weeks</p>
           </header>
           {bookings.length === 0 ? (
             <EmptyState
               icon={EMPTY_ICONS.chart}
               title="No collections yet"
-              message="Once customers pay for their bookings via M-Pesa, your weekly collections chart builds up here."
+              message="Once customers pay for their bookings via M-Pesa, your weekly collections build up here."
             />
           ) : (
-            <CollectionsTrend />
+            <CollectionsArea />
           )}
         </section>
 
-        <div className="payments-side">
-          <section className="panel-card">
-            <header className="card-head">
-              <h2>Send payment prompt</h2>
-              <p>Push an M-Pesa STK prompt to the customer's phone</p>
-            </header>
-
-            {promptable.length === 0 ? (
-              <p className="prompt-empty">
-                {bookings.length === 0
-                  ? "No live bookings yet. Create a booking, then prompt the customer to pay."
-                  : "Nothing outstanding, every live booking is paid up."}
-              </p>
-            ) : (
-              <>
-                <div className="field">
-                  <label htmlFor="prompt-booking">Booking</label>
-                  <Dropdown
-                    id="prompt-booking"
-                    value={selected.ref}
-                    onChange={setSelectedRef}
-                    options={promptable.map((b) => ({
-                      value: b.ref,
-                      label: `${b.customer} · ${b.ref}, KES ${fmtAmount(bookingAmount(b))}`,
-                    }))}
-                  />
-                </div>
-
-                <dl className="prompt-meta">
-                  <div>
-                    <dt>Phone</dt>
-                    <dd>{selected.phone}</dd>
-                  </div>
-                  <div>
-                    <dt>Vehicle</dt>
-                    <dd>
-                      {selected.vehicle} · {selected.plate}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Dates</dt>
-                    <dd>{fmtRange(selected.pickup, selected.dropoff)}</dd>
-                  </div>
-                  <div>
-                    <dt>Amount due</dt>
-                    <dd className="prompt-amount">
-                      KES {fmtAmount(bookingAmount(selected))}
-                    </dd>
-                  </div>
-                </dl>
-
-                <button type="button" className="btn mpesa-btn" onClick={sendPrompt}>
-                  <span className="mpesa-badge">
-                    <img src={mpesaLogo} alt="M-Pesa" />
-                  </span>
-                  {selected.payment === "Prompt sent" ? "Resend prompt" : "Send prompt"}
-                </button>
-              </>
-            )}
-          </section>
-
-          <section className="panel-card">
-            <header className="card-head mini-payments-head">
-              <div>
-                <h2>Payments</h2>
-                <p>Latest receipts</p>
-              </div>
-              <Link
-                className="card-arrow"
-                to="/dashboard/payments/all"
-                aria-label="View all payments"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </Link>
-            </header>
-
-            {settled.length === 0 ? (
-              <p className="prompt-empty">No payments received yet.</p>
-            ) : (
-              <ul className="mini-list">
-                {settled.map((b) => (
-                  <li key={b.ref}>
-                    <div>
-                      <p className="strong">{b.customer}</p>
-                      <p className="cell-sub">{receiptFor(b.ref)}</p>
-                    </div>
-                    <div className="mini-pay-right">
-                      <span className="mini-amount">
-                        KES {fmtAmount(bookingAmount(b))}
-                      </span>
-                      <span className={`chip ${PAY_CHIP[b.payment]}`}>{b.payment}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
+        <section className="chart-card">
+          <header className="card-head">
+            <h2>Where the money is</h2>
+            <p>Collected, outstanding &amp; refunded</p>
+          </header>
+          {bookings.length === 0 ? (
+            <EmptyState
+              compact
+              icon={EMPTY_ICONS.payments}
+              title="Nothing billed yet"
+              message="Your billing breakdown appears here after your first bookings."
+            />
+          ) : (
+            <PaymentDonut segments={donutSegments} />
+          )}
+        </section>
       </div>
+
+      <section className="panel-card">
+        <header className="card-head mini-payments-head">
+          <div>
+            <h2>Processed payments</h2>
+            <p>Cash settled across your bookings</p>
+          </div>
+          {processed.length > 0 && (
+            <Link className="head-link" to="/dashboard/payments/all">
+              View all
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </Link>
+          )}
+        </header>
+
+        {processed.length === 0 ? (
+          <EmptyState
+            compact
+            icon={EMPTY_ICONS.payments}
+            title="No payments received yet"
+            message="Settled M-Pesa payments and refunds land here with their receipt codes."
+          />
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Receipt</th>
+                <th>Booking</th>
+                <th>Vehicle</th>
+                <th>Method</th>
+                <th className="num">Amount (KES)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recent.map((b) => (
+                <tr key={b.ref}>
+                  <td>
+                    <p className="strong">{receiptFor(b.ref)}</p>
+                    <p className="cell-sub">{b.ref}</p>
+                  </td>
+                  <td>{b.customer}</td>
+                  <td>
+                    <p>{b.vehicle}</p>
+                    <p className="cell-sub">{b.plate}</p>
+                  </td>
+                  <td>M-Pesa</td>
+                  <td className="num">{fmtAmount(bookingAmount(b))}</td>
+                  <td>
+                    <span className={`chip ${PAY_CHIP[b.payment]}`}>{b.payment}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
     </>
   );
 }
