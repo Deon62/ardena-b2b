@@ -1,18 +1,17 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
-import { subscribe, getClients } from "./clientsStore";
+import { subscribe, getClients, removeClient } from "./clientsStore";
 import {
   subscribe as subscribeBookings,
   getBookings,
-  fmtDate,
   rentalDays,
 } from "./bookingsStore";
+import { toast } from "./toastStore";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./fleet.css";
 import "./bookings.css";
 
-const FILTERS = ["All", "Verified", "Pending", "Failed"];
-
+// full verification chips (Verified / Pending / Failed) live on the details page
 export const VERIF_CHIP = {
   Verified: "active",
   Pending: "pending",
@@ -25,7 +24,6 @@ export default function Clients() {
   const clients = useSyncExternalStore(subscribe, getClients);
   const bookings = useSyncExternalStore(subscribeBookings, getBookings);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("All");
 
   // per-client booking count, spend (non-cancelled) and most recent pickup
   const byClient = useMemo(() => {
@@ -42,10 +40,22 @@ export default function Clients() {
     return m;
   }, [bookings]);
 
+  // stable display number per client (1, 2, 3…) by list order
+  const clientNo = useMemo(() => {
+    const m = new Map();
+    clients.forEach((c, i) => m.set(c.id, i + 1));
+    return m;
+  }, [clients]);
+
+  function handleDelete(c) {
+    if (!window.confirm(`Remove ${c.name} from your clients?`)) return;
+    removeClient(c.id);
+    toast(`${c.name} removed.`);
+  }
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return clients.filter((c) => {
-      if (filter !== "All" && c.verification !== filter) return false;
       if (!q) return true;
       return (
         c.name.toLowerCase().includes(q) ||
@@ -54,7 +64,7 @@ export default function Clients() {
         c.email.toLowerCase().includes(q)
       );
     });
-  }, [clients, query, filter]);
+  }, [clients, query]);
 
   const stats = useMemo(() => {
     const verified = clients.filter((c) => c.verification === "Verified").length;
@@ -120,18 +130,6 @@ export default function Clients() {
               aria-label="Search clients"
             />
           </div>
-          <div className="seg" role="group" aria-label="Filter by verification">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                type="button"
-                className={f === filter ? "active" : ""}
-                onClick={() => setFilter(f)}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
           <Link to="/dashboard/bookings/new" className="btn btn-primary toolbar-btn">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <path d="M12 5v14M5 12h14" />
@@ -147,30 +145,31 @@ export default function Clients() {
               <th>Contact</th>
               <th>Verification</th>
               <th className="num">Bookings</th>
-              <th className="num">Total spend</th>
-              <th>Last pickup</th>
               <th className="actions-col">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((c) => {
               const agg = byClient.get(c.name);
+              const verified = c.verification === "Verified";
               return (
                 <tr key={c.id}>
                   <td>
-                    <p className="strong">{c.name}</p>
-                    <p className="cell-sub">{c.id}</p>
+                    <div className="client-name">
+                      <span className="client-no">{clientNo.get(c.id)}</span>
+                      <span className="strong">{c.name}</span>
+                    </div>
                   </td>
                   <td>
                     <p>{c.phone}</p>
                     <p className="cell-sub">{c.email}</p>
                   </td>
                   <td>
-                    <span className={`chip ${VERIF_CHIP[c.verification]}`}>{c.verification}</span>
+                    <span className={`chip ${verified ? "active" : "completed"}`}>
+                      {verified ? "Verified" : "Unverified"}
+                    </span>
                   </td>
                   <td className="num">{agg ? agg.count : 0}</td>
-                  <td className="num">{agg ? fmtAmount(agg.spend) : "—"}</td>
-                  <td>{agg ? fmtDate(agg.last) : "—"}</td>
                   <td className="actions-cell">
                     <Link
                       className="icon-btn"
@@ -178,6 +177,18 @@ export default function Clients() {
                     >
                       View
                     </Link>
+                    <button
+                      type="button"
+                      className="icon-btn danger icon-only"
+                      onClick={() => handleDelete(c)}
+                      aria-label={`Remove ${c.name}`}
+                      title="Remove client"
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                      </svg>
+                    </button>
                   </td>
                 </tr>
               );

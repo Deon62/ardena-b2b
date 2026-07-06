@@ -13,7 +13,7 @@ export const NAV_SECTIONS = [
     label: "Trust & money",
     items: [
       { to: "/dashboard/verification", key: "verification", name: "Verification" },
-      { to: "/dashboard/payments", key: "payments", name: "Payments" },
+      { to: "/dashboard/payments", key: "payments", name: "Finances" },
     ],
   },
   {
@@ -31,7 +31,7 @@ export const SECTION_TITLES = {
   bookings: "Bookings",
   clients: "Clients",
   verification: "Verification",
-  payments: "Payments",
+  payments: "Finances",
   staff: "Staff & roles",
   notifications: "Notifications",
   settings: "Settings",
