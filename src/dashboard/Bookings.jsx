@@ -6,10 +6,17 @@ import {
   fmtRange,
   rentalDays,
 } from "./bookingsStore";
-import AvailabilityCalendar from "./AvailabilityCalendar";
+import BookingsTrend from "./charts/BookingsTrend";
+import BookingCalendar from "./BookingCalendar";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./fleet.css";
 import "./bookings.css";
+
+const pad = (n) => String(n).padStart(2, "0");
+function todayLocalISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 const STATUSES = ["All", "Pending", "Confirmed", "Active", "Completed", "Cancelled"];
 
@@ -34,7 +41,6 @@ export default function Bookings() {
   const bookings = useSyncExternalStore(subscribe, getBookings);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
-  const [view, setView] = useState("list");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -51,15 +57,16 @@ export default function Bookings() {
   }, [bookings, query, status]);
 
   const stats = useMemo(() => {
+    const today = todayLocalISO();
     const count = (s) => bookings.filter((b) => b.status === s).length;
-    const bookedValue = bookings
-      .filter((b) => b.status === "Active" || b.status === "Confirmed")
-      .reduce((sum, b) => sum + rentalDays(b.pickup, b.dropoff) * b.rate, 0);
+    const todayReturns = bookings.filter(
+      (b) => b.status === "Active" && b.dropoff === today
+    ).length;
     return {
       active: count("Active"),
       confirmed: count("Confirmed"),
       pending: count("Pending"),
-      bookedValue,
+      todayReturns,
     };
   }, [bookings]);
 
@@ -82,9 +89,9 @@ export default function Bookings() {
           <p className="stat-note">awaiting confirmation</p>
         </article>
         <article className="stat-card">
-          <p className="stat-label">Booked value</p>
-          <p className="stat-value">KES {fmtAmount(stats.bookedValue)}</p>
-          <p className="stat-note">active &amp; upcoming rentals</p>
+          <p className="stat-label">Today's returns</p>
+          <p className="stat-value">{stats.todayReturns}</p>
+          <p className="stat-note">vehicles due back today</p>
         </article>
       </div>
 
@@ -103,28 +110,24 @@ export default function Bookings() {
         </section>
       ) : (
       <>
-      <div className="view-switch">
-        <div className="seg" role="group" aria-label="Switch view">
-          <button
-            type="button"
-            className={view === "list" ? "active" : ""}
-            onClick={() => setView("list")}
-          >
-            List
-          </button>
-          <button
-            type="button"
-            className={view === "calendar" ? "active" : ""}
-            onClick={() => setView("calendar")}
-          >
-            Calendar
-          </button>
-        </div>
+      <div className="bookings-top">
+        <section className="chart-card">
+          <header className="card-head">
+            <h2>Booking trend</h2>
+            <p>New bookings per week, last 8 weeks</p>
+          </header>
+          <BookingsTrend bookings={bookings} />
+        </section>
+
+        <section className="panel-card">
+          <header className="card-head">
+            <h2>Pickups &amp; returns</h2>
+            <p>At a glance, by day</p>
+          </header>
+          <BookingCalendar bookings={bookings} />
+        </section>
       </div>
 
-      {view === "calendar" && <AvailabilityCalendar />}
-
-      {view === "list" && (
       <section className="panel-card">
         <div className="fleet-toolbar">
           <div className="search">
@@ -218,7 +221,6 @@ export default function Bookings() {
           </div>
         )}
       </section>
-      )}
       </>
       )}
     </>
