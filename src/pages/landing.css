@@ -381,6 +381,12 @@
   flex-wrap: wrap;
 }
 
+/* keep the marketing hero CTAs prominent (base .btn is compact for the app) */
+.hero-cta .btn {
+  padding: 13px 28px;
+  font-size: 15px;
+}
+
 .scroll-cue {
   position: absolute;
   bottom: 32px;
