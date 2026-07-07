@@ -4,15 +4,8 @@ import useReveal from "../hooks/useReveal";
 import usePageTitle from "../hooks/usePageTitle";
 import SiteNav from "../components/SiteNav";
 import SiteFooter from "../components/SiteFooter";
-import {
-  MODULES,
-  RATE,
-  LAUNCH_RATE,
-  MINIMUM,
-  CHECK_PRICE,
-  monthlyFor,
-  fmtKES,
-} from "./pricingData";
+import PricingPlans from "../components/PricingPlans";
+import { MODULES, RATE, LAUNCH_RATE } from "./pricingData";
 import "./landing.css";
 
 function Reveal({ as: Tag = "div", className = "", children }) {
@@ -58,7 +51,6 @@ const FAQS = [
 export default function Landing() {
   usePageTitle("");
   const [openFaq, setOpenFaq] = useState(null);
-  const [fleetSize, setFleetSize] = useState(12);
 
   return (
     <div className="landing">
@@ -122,65 +114,14 @@ export default function Landing() {
       {/* ---- Pricing (white) ---- */}
       <section className="panel pricing" id="pricing">
         <Reveal className="section-head">
-          <h2>Pay per vehicle. Nothing else.</h2>
+          <h2>Simple pricing that scales with your fleet.</h2>
           <p className="section-sub">
-            Every module included. KES {LAUNCH_RATE} per vehicle for your first
-            3 months, KES {RATE} after. 14 day free trial, no card required.
+            Every module included on every plan. KES {LAUNCH_RATE} per vehicle
+            for your first 3 months, KES {RATE} after. 14 day free trial, no
+            card required.
           </p>
         </Reveal>
-        <Reveal className="plan-grid price-grid">
-          <article className="plan-card featured">
-            <span className="plan-tag">Launch price</span>
-            <h3>Fleet plan</h3>
-            <div className="calc">
-              <div className="calc-head">
-                <label htmlFor="fleet-size">How many vehicles do you run?</label>
-                <strong>{fleetSize}</strong>
-              </div>
-              <input
-                id="fleet-size"
-                type="range"
-                min="3"
-                max="100"
-                value={fleetSize}
-                onChange={(e) => setFleetSize(Number(e.target.value))}
-              />
-              <p className="calc-price">
-                KES {fmtKES(monthlyFor(fleetSize, LAUNCH_RATE))}
-                <span> /month for your first 3 months</span>
-              </p>
-              <p className="calc-after">
-                then KES {fmtKES(monthlyFor(fleetSize, RATE))} /month · cancel
-                anytime
-              </p>
-            </div>
-            <ul>
-              <li>Unlimited bookings &amp; staff seats</li>
-              <li>M-Pesa payment prompting included</li>
-              <li>Fleet, clients, notifications &amp; reports</li>
-              <li>KES {fmtKES(MINIMUM)} monthly minimum</li>
-            </ul>
-            <Link to="/signup" className="btn btn-primary inverse">
-              Request access
-            </Link>
-          </article>
-
-          <article className="plan-card">
-            <h3>Renter verification</h3>
-            <p className="plan-price">
-              KES {CHECK_PRICE} <span>per check · pay as you go</span>
-            </p>
-            <ul>
-              <li>ID lookup, selfie &amp; licence in one check</li>
-              <li>Top up like airtime, via M-Pesa or card</li>
-              <li>Credits never expire</li>
-              <li>No monthly commitment</li>
-            </ul>
-            <Link to="/signup" className="btn btn-ghost">
-              Request access
-            </Link>
-          </article>
-        </Reveal>
+        <PricingPlans />
       </section>
 
       {/* ---- FAQ (black) ---- */}
