@@ -544,7 +544,7 @@
 }
 
 .plan-card {
-  background: var(--bg);
+  background: var(--panel); /* white lifts off the grey-blue page */
   box-shadow: var(--neo-out);
   padding: 36px 32px;
   display: flex;
@@ -621,6 +621,26 @@
     grid-template-columns: 1fr;
     max-width: 480px;
   }
+}
+
+/* ---- Pricing page: three-card grid, calculator card leads ---- */
+
+.plan-grid.pricing-trio {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 1180px;
+}
+
+@media (max-width: 1000px) {
+  .plan-grid.pricing-trio {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+}
+
+/* section subtitles sit on black panels too */
+.modules .section-sub,
+.faq .section-sub {
+  color: rgba(255, 255, 255, 0.55);
 }
 
 /* ---- Per-vehicle pricing calculator ---- */

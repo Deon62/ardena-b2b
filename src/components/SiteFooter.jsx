@@ -17,7 +17,7 @@ export default function SiteFooter() {
           <a href="/#modules">Fleet management</a>
           <a href="/#modules">Bookings</a>
           <a href="/#modules">Verification</a>
-          <a href="/#pricing">Pricing</a>
+          <Link to="/pricing">Pricing</Link>
         </div>
         <div className="footer-col">
           <p className="footer-head">Company</p>

@@ -9,7 +9,7 @@ export default function SiteNav() {
       <Logo />
       <nav className="nav-links" aria-label="Site">
         <a href="/#modules">Product</a>
-        <a href="/#pricing">Pricing</a>
+        <Link to="/pricing">Pricing</Link>
         <a href="/#faq">FAQ</a>
         <Link to="/about">About</Link>
         <Link to="/contact">Contact</Link>

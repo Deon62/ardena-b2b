@@ -133,8 +133,8 @@ export default function Overview() {
 
         <section className="chart-card">
           <header className="card-head">
-            <h2>Revenue by vehicle class</h2>
-            <p>{sampleData ? "KES '000 · SUVs are this month's mover" : "KES '000 by class"}</p>
+            <h2>Top earning vehicles</h2>
+            <p>{sampleData ? "KES '000 · the Prado is this month's mover" : "KES '000 by vehicle"}</p>
           </header>
           {sampleData ? (
             <RevenueDumbbell />
@@ -142,7 +142,7 @@ export default function Overview() {
             <EmptyState
               icon={EMPTY_ICONS.chart}
               title="No revenue yet"
-              message="Earnings by vehicle class will break down here after your first paid bookings."
+              message="Your top earning vehicles will rank here after your first paid bookings."
             />
           )}
         </section>

@@ -4,6 +4,15 @@ import useReveal from "../hooks/useReveal";
 import usePageTitle from "../hooks/usePageTitle";
 import SiteNav from "../components/SiteNav";
 import SiteFooter from "../components/SiteFooter";
+import {
+  MODULES,
+  RATE,
+  LAUNCH_RATE,
+  MINIMUM,
+  CHECK_PRICE,
+  monthlyFor,
+  fmtKES,
+} from "./pricingData";
 import "./landing.css";
 
 function Reveal({ as: Tag = "div", className = "", children }) {
@@ -14,51 +23,6 @@ function Reveal({ as: Tag = "div", className = "", children }) {
     </Tag>
   );
 }
-
-const MODULES = [
-  {
-    title: "Fleet management",
-    desc: "Every vehicle, document and rate in one registry with availability at a glance.",
-  },
-  {
-    title: "Bookings & reservations",
-    desc: "Create, confirm and track reservations with automatic availability conflict checks.",
-  },
-  {
-    title: "Client management",
-    desc: "A clean profile for every customer with their bookings, payments and history.",
-  },
-  {
-    title: "Identity verification",
-    desc: "Verify renters in seconds with ID lookup, liveness and license checks built in.",
-  },
-  {
-    title: "Payment prompting",
-    desc: "Prompt customers to pay from any booking. M-Pesa first, tracked end to end.",
-  },
-  {
-    title: "Staff & roles",
-    desc: "Invite your team with the right access. Every action logged, always auditable.",
-  },
-  {
-    title: "Notifications",
-    desc: "Your team stays ahead of bookings, payments and expiring documents in real time.",
-  },
-  {
-    title: "Reports & analytics",
-    desc: "Revenue, utilisation and fleet performance, always up to date and exportable.",
-  },
-];
-
-/* Per-vehicle pricing: launch rate for the first 3 months, standard after.
-   Verification is pay as you go. */
-const RATE = 400;
-const LAUNCH_RATE = 200;
-const MINIMUM = 2000;
-const CHECK_PRICE = 100;
-
-const monthlyFor = (vehicles, rate) => Math.max(MINIMUM, vehicles * rate);
-const fmtKES = (n) => n.toLocaleString("en-KE");
 
 const FAQS = [
   {

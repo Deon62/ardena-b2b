@@ -1,21 +1,21 @@
 import { useState } from "react";
 
-/* Revenue by vehicle class, last month → this month, dumbbell chart:
+/* Top earning vehicles, last month → this month, dumbbell chart:
    one hue, two shades (light = last month, solid = this month). KES '000. */
 
 const DATA = [
-  { name: "SUV", prev: 142, curr: 196 },
-  { name: "Saloon", prev: 94, curr: 85 },
-  { name: "Van", prev: 70, curr: 64 },
-  { name: "Pickup", prev: 48, curr: 44 },
-  { name: "Hatchback", prev: 26, curr: 31 },
+  { name: "Toyota Prado", prev: 142, curr: 196 },
+  { name: "Mazda CX-5", prev: 94, curr: 85 },
+  { name: "Nissan NV350", prev: 70, curr: 64 },
+  { name: "Toyota Hilux", prev: 48, curr: 44 },
+  { name: "Toyota Axio", prev: 26, curr: 31 },
 ];
 
 const W = 460;
 const H = 250;
 const TOP = 38;
 const BOTTOM = 30;
-const LEFT = 84;
+const LEFT = 118;
 const RIGHT = 84;
 const MAX = 210;
 const TICKS = [0, 50, 100, 150, 200];
@@ -42,7 +42,7 @@ export default function RevenueDumbbell() {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label="Revenue by vehicle class, last month versus this month, in thousands of shillings"
+        aria-label="Top earning vehicles, last month versus this month, in thousands of shillings"
       >
         {/* legend */}
         <g className="db-legend">
