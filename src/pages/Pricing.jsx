@@ -59,8 +59,8 @@ export default function Pricing() {
             <Link to="/signup" className="btn btn-brand">
               Request access
             </Link>
-            <Link to="/dashboard" className="btn btn-ghost">
-              View live demo
+            <Link to="/login" className="btn btn-ghost">
+              Sign in
             </Link>
           </div>
         </div>

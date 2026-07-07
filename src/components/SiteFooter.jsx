@@ -32,7 +32,6 @@ export default function SiteFooter() {
           <p className="footer-head">Get started</p>
           <Link to="/signup">Request access</Link>
           <Link to="/login">Sign in</Link>
-          <Link to="/dashboard">View live demo</Link>
         </div>
       </div>
       <div className="footer-bar">

@@ -71,8 +71,8 @@ export default function Landing() {
               no heavy setup.
             </p>
             <div className="hero-cta">
-              <Link to="/dashboard" className="btn btn-primary inverse">
-                View live demo
+              <Link to="/login" className="btn btn-primary inverse">
+                Sign in
               </Link>
               <Link to="/signup" className="btn btn-brand">
                 Request access
@@ -155,13 +155,13 @@ export default function Landing() {
             <br />
             take rentals seriously.
           </h2>
-          <p>Start with a demo, or request access for your fleet.</p>
+          <p>Request access for your fleet, or sign in if you already have logins.</p>
           <div className="hero-cta">
             <Link to="/signup" className="btn btn-primary">
               Request access
             </Link>
-            <Link to="/dashboard" className="btn btn-ghost">
-              View live demo
+            <Link to="/login" className="btn btn-ghost">
+              Sign in
             </Link>
           </div>
         </Reveal>
