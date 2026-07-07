@@ -110,6 +110,12 @@
   flex-direction: column;
 }
 
+.invoice-empty {
+  font-size: 13.5px;
+  color: var(--ink-mute);
+  padding: 14px 0;
+}
+
 .invoice-row {
   display: grid;
   /* fixed amount + action columns so they line up across every row */

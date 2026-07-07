@@ -5,8 +5,8 @@
 const KEY = "ardena-onboarding";
 
 const DEFAULTS = {
-  vehicle: true, // the demo workspace already has a fleet
-  booking: true, // and bookings on record
+  vehicle: false,
+  booking: false,
   prompt: false,
   verify: false,
   team: false,
@@ -46,6 +46,21 @@ export function subscribe(fn) {
 
 export function getOnboarding() {
   return state;
+}
+
+// Merge server state (GET /onboarding) into the checklist. Only known step
+// keys are taken; `dismissed` stays a local preference. The backend may call
+// the invite step "staff" — the UI calls it "team".
+export function hydrateOnboarding(server) {
+  if (!server || typeof server !== "object") return;
+  const next = { ...state };
+  for (const key of ["vehicle", "booking", "prompt", "verify", "team"]) {
+    if (typeof server[key] === "boolean") next[key] = server[key];
+  }
+  if (typeof server.staff === "boolean") next.team = server.staff;
+  state = next;
+  persist();
+  emit();
 }
 
 export function markStep(step) {

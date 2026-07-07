@@ -1,4 +1,6 @@
-import { Routes, Route } from "react-router-dom";
+import { useSyncExternalStore } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { subscribe as subscribeAuth, isAuthed } from "./lib/authStore";
 import Landing from "./pages/Landing";
 import About from "./pages/About";
 import Pricing from "./pages/Pricing";
@@ -27,6 +29,13 @@ import Notifications from "./dashboard/Notifications";
 import Settings from "./dashboard/Settings";
 import Placeholder from "./dashboard/Placeholder";
 
+// Gate the dashboard behind a session; reacts to the session being
+// cleared (e.g. an expired token) by bouncing back to sign-in.
+function RequireAuth({ children }) {
+  const authed = useSyncExternalStore(subscribeAuth, isAuthed);
+  return authed ? children : <Navigate to="/login" replace />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -37,7 +46,14 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/v/:slug" element={<VerifyBusiness />} />
-      <Route path="/dashboard" element={<DashboardLayout />}>
+      <Route
+        path="/dashboard"
+        element={
+          <RequireAuth>
+            <DashboardLayout />
+          </RequireAuth>
+        }
+      >
         <Route index element={<Overview />} />
         <Route path="fleet" element={<Fleet />} />
         <Route path="fleet/new" element={<AddVehicle />} />

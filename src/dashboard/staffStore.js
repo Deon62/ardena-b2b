@@ -1,7 +1,8 @@
-// In-memory staff store (mock backend), same pattern as the other stores.
-// Seats are unlimited on the Fleet plan.
+// In-memory staff store, same pattern as the other stores. Seats are
+// unlimited on the Fleet plan. The signed-in user is the Owner row; invites
+// stay local until the staff API ships (docs/backend-api.md §8).
 import { markStep } from "./onboardingStore";
-import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
+import { subscribe as subscribeAuth, getSession } from "../lib/authStore";
 
 export const ROLES = ["Manager", "Booking agent", "Finance", "Viewer"];
 
@@ -13,19 +14,9 @@ export const ROLE_NOTES = [
   { role: "Viewer", note: "Read-only across all modules." },
 ];
 
-let staff = [
-  { id: "ST-01", name: "Amina Yusuf", email: "amina@acmecarhire.co.ke", role: "Owner", status: "Active", lastActive: "Today, 08:42" },
-  { id: "ST-02", name: "David Kariuki", email: "david@acmecarhire.co.ke", role: "Manager", status: "Active", lastActive: "Today, 07:15" },
-  { id: "ST-03", name: "Lucy Wanjiru", email: "lucy@acmecarhire.co.ke", role: "Booking agent", status: "Active", lastActive: "Yesterday, 17:30" },
-  { id: "ST-04", name: "Mark Odhiambo", email: "mark@acmecarhire.co.ke", role: "Booking agent", status: "Active", lastActive: "Today, 09:05" },
-  { id: "ST-05", name: "Susan Njoki", email: "susan@acmecarhire.co.ke", role: "Finance", status: "Active", lastActive: "2 Jul, 16:11" },
-  { id: "ST-06", name: "Paul Mworia", email: "paul.mworia@gmail.com", role: "Viewer", status: "Invited", lastActive: "—" },
-];
+let staff = [];
 
-let nextId = 7;
-
-// a brand-new business is just its owner
-const OWNER_ONLY = staff.slice(0, 1);
+let nextId = 1;
 
 const listeners = new Set();
 
@@ -38,15 +29,46 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
-subscribeDemo(emit);
+// the signed-in user heads the list as Owner
+let ownerRow = null;
+
+function ownerFromSession() {
+  const { user } = getSession();
+  if (!user) return null;
+  const name = user.name || user.full_name || user.contact_name || user.email || "Owner";
+  if (!ownerRow || ownerRow.name !== name || ownerRow.email !== (user.email || "")) {
+    ownerRow = {
+      id: "ST-OWNER",
+      name,
+      email: user.email || "",
+      role: "Owner",
+      status: "Active",
+      lastActive: "Now",
+    };
+  }
+  return ownerRow;
+}
+
+let snapshot = staff;
+
+function rebuild() {
+  const owner = ownerFromSession();
+  snapshot = owner ? [owner, ...staff] : staff;
+}
+
+rebuild();
+subscribeAuth(() => {
+  rebuild();
+  emit();
+});
 
 export function getStaff() {
-  return getSampleData() ? staff : OWNER_ONLY;
+  return snapshot;
 }
 
 export function findByEmail(email) {
   const e = email.trim().toLowerCase();
-  return staff.find((s) => s.email.toLowerCase() === e);
+  return snapshot.find((s) => s.email.toLowerCase() === e);
 }
 
 export function inviteStaff({ name, email, role }) {
@@ -61,11 +83,13 @@ export function inviteStaff({ name, email, role }) {
       lastActive: "—",
     },
   ];
+  rebuild();
   markStep("team");
   emit();
 }
 
 export function removeStaff(id) {
   staff = staff.filter((s) => s.id !== id);
+  rebuild();
   emit();
 }

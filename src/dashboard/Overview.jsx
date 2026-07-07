@@ -1,74 +1,16 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import BookingHeatmap from "./charts/BookingHeatmap";
 import RevenueDumbbell from "./charts/RevenueDumbbell";
 import UtilisationTrend from "./charts/UtilisationTrend";
 import OnboardingChecklist from "./OnboardingChecklist";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
-import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
+import { subscribe as subscribeFleet, getVehicles, expiringSoon } from "./fleetStore";
+import { subscribe as subscribeBookings, getBookings, rentalDays } from "./bookingsStore";
 import "./overview.css";
 
-const EMPTY_KPIS = [
-  { label: "Collected this month", value: "KES 0", delta: "no payments yet", neutral: true, vs: "" },
-  { label: "Active bookings", value: "0", delta: "no rentals yet", neutral: true, vs: "" },
-  { label: "Fleet utilisation", value: "0%", delta: "add vehicles", neutral: true, vs: "" },
-  { label: "Verifications run", value: "0", delta: "none yet", neutral: true, vs: "" },
-];
+const fmtKES = (n) => `KES ${n.toLocaleString("en-KE")}`;
 
-const KPIS = [
-  {
-    label: "Collected this month",
-    value: "KES 482,300",
-    delta: "+12%",
-    good: true,
-    vs: "vs June",
-  },
-  {
-    label: "Active bookings",
-    value: "11",
-    delta: "+2",
-    good: true,
-    vs: "vs last week",
-  },
-  {
-    label: "Fleet utilisation",
-    value: "71%",
-    delta: "+5pts",
-    good: true,
-    vs: "vs June",
-  },
-  {
-    label: "Verifications run",
-    value: "38",
-    delta: "36 passed",
-    neutral: true,
-    vs: "this month",
-  },
-];
-
-const FLEET = [
-  { label: "Available", count: 14 },
-  { label: "On booking", count: 7 },
-  { label: "In maintenance", count: 3 },
-];
-const FLEET_TOTAL = FLEET.reduce((s, f) => s + f.count, 0);
-
-const ATTENTION = [
-  {
-    kind: "warning",
-    title: "Insurance expiring",
-    meta: "KDL 482A · in 9 days",
-  },
-  {
-    kind: "warning",
-    title: "Inspection due",
-    meta: "KCZ 771B · in 14 days",
-  },
-  {
-    kind: "critical",
-    title: "Verification failed",
-    meta: "P. Njoroge · ID mismatch",
-  },
-];
+const FLEET_STATUSES = ["Available", "On booking", "In maintenance"];
 
 const STATUS_ICON = {
   warning: (
@@ -86,8 +28,71 @@ const STATUS_ICON = {
 };
 
 export default function Overview() {
-  const sampleData = useSyncExternalStore(subscribeDemo, getSampleData);
-  const kpis = sampleData ? KPIS : EMPTY_KPIS;
+  const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
+  const bookings = useSyncExternalStore(subscribeBookings, getBookings);
+
+  const hasVehicles = vehicles.length > 0;
+  const hasBookings = bookings.length > 0;
+
+  const kpis = useMemo(() => {
+    const collected = bookings
+      .filter((b) => b.payment === "Paid")
+      .reduce((s, b) => s + rentalDays(b.pickup, b.dropoff) * b.rate, 0);
+    const active = bookings.filter((b) => b.status === "Active").length;
+    const onBooking = vehicles.filter((v) => v.status === "On booking").length;
+    const util = hasVehicles ? Math.round((onBooking / vehicles.length) * 100) : 0;
+    return [
+      {
+        label: "Collected this month",
+        value: fmtKES(collected),
+        delta: collected ? "via M-Pesa" : "no payments yet",
+        neutral: true,
+      },
+      {
+        label: "Active bookings",
+        value: String(active),
+        delta: active ? "on the road" : "no rentals yet",
+        neutral: true,
+      },
+      {
+        label: "Fleet utilisation",
+        value: `${util}%`,
+        delta: hasVehicles ? "of fleet on booking" : "add vehicles",
+        neutral: true,
+      },
+      {
+        label: "Verifications run",
+        value: "0",
+        delta: "none yet",
+        neutral: true,
+      },
+    ];
+  }, [bookings, vehicles, hasVehicles]);
+
+  const fleetRows = useMemo(
+    () =>
+      FLEET_STATUSES.map((label) => ({
+        label,
+        count: vehicles.filter((v) => v.status === label).length,
+      })),
+    [vehicles]
+  );
+
+  // expiring documents flag themselves; verification alerts come with the API
+  const attention = useMemo(() => {
+    const items = [];
+    vehicles.forEach((v) => {
+      const insDays = expiringSoon(v.ins);
+      if (insDays !== null) {
+        items.push({ kind: "warning", title: "Insurance expiring", meta: `${v.plate} · in ${insDays} days` });
+      }
+      const inspDays = expiringSoon(v.inspection);
+      if (inspDays !== null) {
+        items.push({ kind: "warning", title: "Inspection due", meta: `${v.plate} · in ${inspDays} days` });
+      }
+    });
+    return items;
+  }, [vehicles]);
 
   return (
     <>
@@ -120,7 +125,7 @@ export default function Overview() {
             <h2>Booking rhythm</h2>
             <p>Pickups by day and time, last 4 weeks</p>
           </header>
-          {sampleData ? (
+          {hasBookings ? (
             <BookingHeatmap />
           ) : (
             <EmptyState
@@ -134,9 +139,9 @@ export default function Overview() {
         <section className="chart-card">
           <header className="card-head">
             <h2>Top earning vehicles</h2>
-            <p>{sampleData ? "KES '000 · the Prado is this month's mover" : "KES '000 by vehicle"}</p>
+            <p>KES '000 by vehicle, last month vs this month</p>
           </header>
-          {sampleData ? (
+          {hasBookings ? (
             <RevenueDumbbell />
           ) : (
             <EmptyState
@@ -155,7 +160,7 @@ export default function Overview() {
             <h2>Fleet utilisation</h2>
             <p>% of vehicles out on booking, weekly, last 12 weeks</p>
           </header>
-          {sampleData ? (
+          {hasBookings ? (
             <UtilisationTrend />
           ) : (
             <EmptyState
@@ -170,15 +175,15 @@ export default function Overview() {
           <section className="panel-card">
             <header className="card-head">
               <h2>Fleet status</h2>
-              <p>{sampleData ? `${FLEET_TOTAL} vehicles` : "No vehicles"}</p>
+              <p>{hasVehicles ? `${vehicles.length} vehicles` : "No vehicles"}</p>
             </header>
-            {sampleData ? (
+            {hasVehicles ? (
               <div className="fleet-rows">
-                {FLEET.map((f) => (
+                {fleetRows.map((f) => (
                   <div className="fleet-row" key={f.label}>
                     <span className="fleet-label">{f.label}</span>
                     <span className="fleet-bar">
-                      <i style={{ width: `${(f.count / FLEET_TOTAL) * 100}%` }} />
+                      <i style={{ width: `${(f.count / vehicles.length) * 100}%` }} />
                     </span>
                     <span className="fleet-count">{f.count}</span>
                   </div>
@@ -199,9 +204,9 @@ export default function Overview() {
               <h2>Needs attention</h2>
               <p>Documents and checks</p>
             </header>
-            {sampleData ? (
+            {attention.length > 0 ? (
               <ul className="attention-list">
-                {ATTENTION.map((a) => (
+                {attention.map((a) => (
                   <li key={a.title + a.meta}>
                     <span className={`attention-icon ${a.kind}`}>
                       {STATUS_ICON[a.kind]}

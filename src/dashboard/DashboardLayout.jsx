@@ -13,14 +13,16 @@ import {
 import {
   subscribe as subscribeBusiness,
   getBusiness,
+  setBusiness,
   businessInitial,
 } from "./businessStore";
+import { hydrateOnboarding } from "./onboardingStore";
+import { fetchMe, fetchOnboarding, logout } from "../lib/api";
 import Logo from "../components/Logo";
 import VerifiedBadge from "../components/VerifiedBadge";
 import usePageTitle from "../hooks/usePageTitle";
 import PageSkeleton from "./PageSkeleton";
 import Toasts from "./Toasts";
-import DemoToggle from "./DemoToggle";
 import "./dashboard.css";
 
 export default function DashboardLayout() {
@@ -34,6 +36,32 @@ export default function DashboardLayout() {
   const unread = notifications.filter((n) => !n.read).length;
   const supportUnread = useSyncExternalStore(subscribeSupport, getSupportState).unread;
   const business = useSyncExternalStore(subscribeBusiness, getBusiness);
+
+  // hydrate the session: profile + onboarding state from the live API
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { user, business: biz } = await fetchMe();
+        if (!alive) return;
+        const name = biz?.name || biz?.business_name || user?.business_name;
+        if (name) setBusiness({ name });
+        const onboarding = await fetchOnboarding();
+        if (alive && onboarding) hydrateOnboarding(onboarding);
+      } catch {
+        /* a dead session is cleared by the client; RequireAuth redirects */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function handleLogout() {
+    setMenuOpen(false);
+    await logout();
+    navigate("/login");
+  }
 
   // brief skeleton on every route change, standing in for real data fetches
   const [pageLoading, setPageLoading] = useState(true);
@@ -112,7 +140,7 @@ export default function DashboardLayout() {
                 Support
                 {supportUnread > 0 && <span className="nav-badge">{supportUnread}</span>}
               </button>
-              <button type="button" role="menuitem" onClick={() => go("/")}>
+              <button type="button" role="menuitem" onClick={handleLogout}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 21H6a2 2 0 01-2-2V5a2 2 0 012-2h3" />
                   <path d="M16 17l5-5-5-5M21 12H9" />
@@ -138,7 +166,7 @@ export default function DashboardLayout() {
             </span>
             <div>
               <p className="tenant-name">
-                {business.name} <VerifiedBadge compact />
+                {business.name || "Your business"} <VerifiedBadge compact />
               </p>
               <p className="tenant-plan">Fleet plan</p>
             </div>
@@ -154,7 +182,6 @@ export default function DashboardLayout() {
       </main>
 
       <Toasts />
-      <DemoToggle />
     </div>
   );
 }

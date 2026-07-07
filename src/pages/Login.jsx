@@ -1,13 +1,30 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
+import { login } from "../lib/api";
+import usePageTitle from "../hooks/usePageTitle";
 import "./auth.css";
 
 export default function Login() {
+  usePageTitle("Sign in");
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    navigate("/dashboard");
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await login(email.trim(), password);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
   }
 
   return (
@@ -33,6 +50,8 @@ export default function Login() {
               type="email"
               placeholder="you@company.co.ke"
               autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
@@ -43,11 +62,20 @@ export default function Login() {
               type="password"
               placeholder="••••••••"
               autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
-          <button type="submit" className="btn btn-primary">
-            Sign in
+
+          {error && (
+            <p className="auth-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
 

@@ -1,10 +1,9 @@
-// Business profile (name + logo). Shared by the sidebar avatar and Settings,
-// persisted to localStorage so an uploaded logo survives reloads.
+// Session state: tokens plus the signed-in user and their business.
+// Persisted to localStorage so a refresh keeps you signed in.
 
-const KEY = "ardena-business";
+const KEY = "ardena-session";
 
-// name is filled from /me once the session hydrates
-const DEFAULTS = { name: "", logo: null };
+const DEFAULTS = { token: null, refreshToken: null, user: null, business: null };
 
 function load() {
   try {
@@ -37,17 +36,26 @@ export function subscribe(fn) {
   return () => listeners.delete(fn);
 }
 
-export function getBusiness() {
+export function getSession() {
   return state;
 }
 
-export function setBusiness(next) {
+export function isAuthed() {
+  return Boolean(state.token);
+}
+
+export function setSession(next) {
   state = { ...state, ...next };
   persist();
   emit();
 }
 
-// First letter for the fallback avatar
-export function businessInitial(name) {
-  return (name || "A").trim().charAt(0).toUpperCase();
+export function clearSession() {
+  state = { ...DEFAULTS };
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    /* ignore */
+  }
+  emit();
 }

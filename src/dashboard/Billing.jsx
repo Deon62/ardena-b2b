@@ -2,7 +2,6 @@ import { useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
 import { CHECK_PRICE, WALLET_BALANCE } from "./verificationsStore";
-import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
 import BillingTimeline from "./charts/BillingTimeline";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./overview.css";
@@ -13,23 +12,18 @@ import "./billing.css";
 const PAYSTACK_LINK = "https://paystack.shop/pay/f31jnsoutz";
 
 const PLAN = { launchRate: 200 };
-const CHECKS_USED = 5;
 
-// Invoices, newest first. The current cycle is "Due" once payment time arrives.
-const INVOICES = [
-  { ref: "INV-2026-007", title: "July 2026", detail: "12 vehicles × KES 200", amount: 2400, status: "Due", when: "Due 15 Jul 2026" },
-  { ref: "INV-2026-006", title: "June 2026", detail: "12 vehicles × KES 200", amount: 2400, status: "Paid", when: "Paid 1 Jun 2026" },
-  { ref: "INV-2026-005", title: "May 2026", detail: "11 vehicles × KES 200", amount: 2200, status: "Paid", when: "Paid 1 May 2026" },
-];
+// Invoices, newest first — populated by the billing API when it ships
+// (docs/backend-api.md §10).
+const INVOICES = [];
 
 const fmtAmount = (n) => n.toLocaleString("en-KE");
 
 export default function Billing() {
   const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
-  const sampleData = useSyncExternalStore(subscribeDemo, getSampleData);
 
-  const wallet = sampleData ? WALLET_BALANCE : 0;
-  const checksUsed = sampleData ? CHECKS_USED : 0;
+  const wallet = WALLET_BALANCE;
+  const checksUsed = 0;
   const monthly = vehicles.length * PLAN.launchRate;
 
   // the two bars that make up this month's spend
@@ -39,7 +33,7 @@ export default function Billing() {
   ];
   const totalSpend = billed.reduce((s, b) => s + b.amount, 0);
 
-  if (!sampleData) {
+  if (vehicles.length === 0) {
     return (
       <section className="panel-card">
         <EmptyState
@@ -65,7 +59,15 @@ export default function Billing() {
             <h2>What you've paid</h2>
             <p>Your monthly bill over time</p>
           </header>
-          <BillingTimeline />
+          {INVOICES.length > 0 ? (
+            <BillingTimeline />
+          ) : (
+            <EmptyState
+              icon={EMPTY_ICONS.payments}
+              title="No payments yet"
+              message="Your paid invoices will chart here once your first billing cycle closes."
+            />
+          )}
         </section>
 
         <section className="chart-card">
@@ -116,6 +118,11 @@ export default function Billing() {
         </header>
 
         <div className="invoice-list">
+          {INVOICES.length === 0 && (
+            <p className="invoice-empty">
+              No invoices yet — your first one is generated when your trial ends.
+            </p>
+          )}
           {INVOICES.map((inv) => {
             const due = inv.status === "Due";
             return (

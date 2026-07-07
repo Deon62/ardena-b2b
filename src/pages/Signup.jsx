@@ -3,19 +3,56 @@ import { Link } from "react-router-dom";
 import Logo from "../components/Logo";
 import Dropdown from "../components/Dropdown";
 import usePageTitle from "../hooks/usePageTitle";
+import { requestAccess } from "../lib/api";
 import "./auth.css";
 
-const FLEET_SIZES = ["3 – 10 vehicles", "11 – 30 vehicles", "31 – 100 vehicles", "100+ vehicles"];
+// Display labels mapped to the API's fleet_size values
+const FLEET_SIZES = {
+  "3 – 10 vehicles": "3–10",
+  "11 – 30 vehicles": "11–30",
+  "31 – 100 vehicles": "31–100",
+  "100+ vehicles": "100+",
+};
+const FLEET_LABELS = Object.keys(FLEET_SIZES);
 
 /* Access is by request: every business is verified before logins are sent. */
 export default function Signup() {
   usePageTitle("Request access");
-  const [sent, setSent] = useState(false);
-  const [fleetSize, setFleetSize] = useState(FLEET_SIZES[0]);
+  const [sent, setSent] = useState(null); // { reference } once submitted
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [form, setForm] = useState({
+    business: "",
+    town: "",
+    name: "",
+    email: "",
+    phone: "",
+    website: "",
+  });
+  const [fleetSize, setFleetSize] = useState(FLEET_LABELS[0]);
 
-  function handleSubmit(e) {
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    setSent(true);
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await requestAccess({
+        business_name: form.business.trim(),
+        contact_name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        fleet_size: FLEET_SIZES[fleetSize],
+        town: form.town.trim(),
+        website: form.website.trim() || undefined,
+      });
+      setSent({ reference: res?.reference || res?.ref || null });
+    } catch (err) {
+      setError(err.message);
+      setBusy(false);
+    }
   }
 
   if (sent) {
@@ -37,7 +74,9 @@ export default function Signup() {
             KRA PIN and director identity. Expect your logins by email or
             WhatsApp within 24 hours.
           </p>
-          <p className="request-ref">Reference: REQ-2026-118</p>
+          {sent.reference && (
+            <p className="request-ref">Reference: {sent.reference}</p>
+          )}
           <Link to="/" className="btn btn-ghost">
             Back to home
           </Link>
@@ -77,7 +116,7 @@ export default function Signup() {
           <div className="auth-row">
             <div className="field">
               <label htmlFor="r-business">Business name</label>
-              <input id="r-business" type="text" placeholder="Acme Car Hire Ltd" autoComplete="organization" required />
+              <input id="r-business" type="text" placeholder="Acme Car Hire Ltd" autoComplete="organization" value={form.business} onChange={set("business")} required />
             </div>
             <div className="field">
               <label htmlFor="r-fleet">Fleet size</label>
@@ -85,36 +124,43 @@ export default function Signup() {
                 id="r-fleet"
                 value={fleetSize}
                 onChange={setFleetSize}
-                options={FLEET_SIZES}
+                options={FLEET_LABELS}
               />
             </div>
           </div>
           <div className="auth-row">
             <div className="field">
               <label htmlFor="r-town">Town / county</label>
-              <input id="r-town" type="text" placeholder="Nakuru" required />
+              <input id="r-town" type="text" placeholder="Nakuru" value={form.town} onChange={set("town")} required />
             </div>
             <div className="field">
               <label htmlFor="r-name">Your name</label>
-              <input id="r-name" type="text" placeholder="Wanjiku Kamau" autoComplete="name" required />
+              <input id="r-name" type="text" placeholder="Wanjiku Kamau" autoComplete="name" value={form.name} onChange={set("name")} required />
             </div>
           </div>
           <div className="auth-row">
             <div className="field">
               <label htmlFor="r-email">Work email</label>
-              <input id="r-email" type="email" placeholder="you@company.co.ke" autoComplete="email" required />
+              <input id="r-email" type="email" placeholder="you@company.co.ke" autoComplete="email" value={form.email} onChange={set("email")} required />
             </div>
             <div className="field">
               <label htmlFor="r-phone">Phone (WhatsApp)</label>
-              <input id="r-phone" type="tel" placeholder="0700 000 000" autoComplete="tel" required />
+              <input id="r-phone" type="tel" placeholder="0700 000 000" autoComplete="tel" value={form.phone} onChange={set("phone")} required />
             </div>
           </div>
           <div className="field">
             <label htmlFor="r-web">Website or Instagram · optional</label>
-            <input id="r-web" type="text" placeholder="acmecarhire.co.ke" />
+            <input id="r-web" type="text" placeholder="acmecarhire.co.ke" value={form.website} onChange={set("website")} />
           </div>
-          <button type="submit" className="btn btn-primary">
-            Request access
+
+          {error && (
+            <p className="auth-error" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button type="submit" className="btn btn-primary" disabled={busy}>
+            {busy ? "Sending…" : "Request access"}
           </button>
         </form>
       </main>

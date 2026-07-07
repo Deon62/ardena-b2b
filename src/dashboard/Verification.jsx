@@ -1,4 +1,4 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { fmtDate } from "./bookingsStore";
 import {
@@ -11,7 +11,6 @@ import {
   maskNumber,
 } from "./verificationsStore";
 import { markStep } from "./onboardingStore";
-import { subscribe as subscribeDemo, getSampleData } from "./demoStore";
 import Dropdown from "../components/Dropdown";
 import { toast } from "./toastStore";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
@@ -38,17 +37,14 @@ const todayISO = () => {
 };
 
 export default function Verification() {
-  const sampleData = useSyncExternalStore(subscribeDemo, getSampleData);
-
   const [type, setType] = useState(LOOKUP_TYPES[0]);
   const [number, setNumber] = useState("");
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState(null); // { entity } | { error }
   const [ownChecks, setOwnChecks] = useState([]); // lookups run this session
 
-  const baseChecks = sampleData ? LOOKUPS : [];
-  const checks = [...ownChecks, ...baseChecks];
-  const wallet = sampleData ? WALLET_BALANCE : 0;
+  const checks = [...ownChecks, ...LOOKUPS];
+  const wallet = WALLET_BALANCE;
 
   const stats = useMemo(() => {
     const thisMonth = checks.filter((c) => c.date.startsWith("2026-07")).length;

@@ -10,7 +10,7 @@
 
 // Pay-as-you-go: flat price per lookup, drawn from a prepaid wallet
 export const CHECK_PRICE = 100; // KES
-export const WALLET_BALANCE = 1500; // KES, mock until billing is wired in
+export const WALLET_BALANCE = 0; // KES, real balance comes with the wallet API
 
 export const LOOKUP_TYPES = ["National ID", "Driver's Licence", "KRA PIN"];
 
@@ -20,20 +20,8 @@ export const STATUS_CHIP = {
   Mismatch: "pending",
 };
 
-// Recent lookups (mock, read-only until the Dojah calls are wired in)
-export const LOOKUPS = [
-  { id: "CHK-1042", customer: "Grace Achieng", idType: "National ID", idNumber: "29845112", status: "Verified", ref: "BK-2435", date: "2026-07-03" },
-  { id: "CHK-1041", customer: "Kevin Omondi", idType: "Driver's Licence", idNumber: "DLA0492187", status: "Verified", ref: "BK-2438", date: "2026-07-03" },
-  { id: "CHK-1040", customer: "Esther Nyambura", idType: "National ID", idNumber: "31200984", status: "Not found", ref: null, date: "2026-07-03" },
-  { id: "CHK-1039", customer: "Mercy Wambui", idType: "National ID", idNumber: "27718443", status: "Verified", ref: "BK-2437", date: "2026-07-02" },
-  { id: "CHK-1038", customer: "Dennis Mutua", idType: "National ID", idNumber: "24410765", status: "Mismatch", ref: "BK-2436", date: "2026-07-02" },
-  { id: "CHK-1037", customer: "James Otieno", idType: "Driver's Licence", idNumber: "DLB7710233", status: "Verified", ref: "BK-2434", date: "2026-06-28" },
-  { id: "CHK-1036", customer: "Wanjiku Kamau", idType: "National ID", idNumber: "26118340", status: "Verified", ref: "BK-2431", date: "2026-06-25" },
-  { id: "CHK-1035", customer: "Brian Mwangi", idType: "National ID", idNumber: "30331806", status: "Verified", ref: "BK-2429", date: "2026-06-22" },
-  { id: "CHK-1034", customer: "Faith Njeri", idType: "National ID", idNumber: "28990574", status: "Verified", ref: "BK-2426", date: "2026-06-20" },
-  { id: "CHK-1033", customer: "Samuel Kiptoo", idType: "KRA PIN", idNumber: "A004471019P", status: "Verified", ref: "BK-2424", date: "2026-06-18" },
-  { id: "CHK-1032", customer: "Rose Chebet", idType: "National ID", idNumber: "22210583", status: "Verified", ref: "BK-2411", date: "2026-05-29" },
-];
+// Lookup history, populated by the verification API when it ships
+export const LOOKUPS = [];
 
 // Mock registry lookup: deterministic result per number so the demo feels
 // real. Swap this for the live Dojah call (returns the `entity` object).
