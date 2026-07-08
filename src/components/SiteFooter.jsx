@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
+import { SOCIALS } from "./socials";
 
 export default function SiteFooter() {
   return (
@@ -11,6 +12,19 @@ export default function SiteFooter() {
             Ardena for Business. The operating system for car rental and fleet
             businesses in Kenya.
           </p>
+          <div className="footer-socials">
+            {SOCIALS.map((s) => (
+              <a
+                key={s.name}
+                href={s.href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={s.name}
+              >
+                {s.icon}
+              </a>
+            ))}
+          </div>
         </div>
         <div className="footer-col">
           <p className="footer-head">Product</p>
