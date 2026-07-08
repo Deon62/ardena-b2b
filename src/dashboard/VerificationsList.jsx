@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { fmtDate } from "./bookingsStore";
-import { LOOKUPS, STATUS_CHIP, maskNumber } from "./verificationsStore";
+import { subscribe, getState, hydrateLookups, STATUS_CHIP } from "./verificationsStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./verification.css";
@@ -9,12 +9,17 @@ import "./verification.css";
 const FILTERS = ["All", "Verified", "Not found", "Mismatch"];
 
 export default function VerificationsList() {
+  const { lookups, lookupsLoaded } = useSyncExternalStore(subscribe, getState);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("All");
 
+  useEffect(() => {
+    hydrateLookups().catch(() => {});
+  }, []);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return LOOKUPS.filter((c) => {
+    return lookups.filter((c) => {
       if (filter !== "All" && c.status !== filter) return false;
       if (!q) return true;
       return (
@@ -24,7 +29,7 @@ export default function VerificationsList() {
         c.id.toLowerCase().includes(q)
       );
     });
-  }, [query, filter]);
+  }, [lookups, query, filter]);
 
   return (
     <>
@@ -99,7 +104,7 @@ export default function VerificationsList() {
                 </td>
                 <td>{c.id}</td>
                 <td>{c.idType}</td>
-                <td className="mono">{maskNumber(c.idNumber)}</td>
+                <td className="mono">{c.idNumber}</td>
                 <td>
                   <span className={`chip ${STATUS_CHIP[c.status]}`}>{c.status}</span>
                 </td>
@@ -111,7 +116,11 @@ export default function VerificationsList() {
 
         {filtered.length === 0 && (
           <div className="empty-block fleet-empty">
-            <p>No checks match your search.</p>
+            <p>
+              {!lookupsLoaded && lookups.length === 0
+                ? "Loading checks…"
+                : "No checks match your search."}
+            </p>
           </div>
         )}
       </section>

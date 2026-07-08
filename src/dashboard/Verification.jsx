@@ -1,16 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { fmtDate } from "./bookingsStore";
 import {
-  LOOKUPS,
+  subscribe,
+  getState,
+  hydrateVerification,
+  runLookup,
   LOOKUP_TYPES,
   STATUS_CHIP,
   CHECK_PRICE,
-  WALLET_BALANCE,
-  lookupIdentity,
-  maskNumber,
 } from "./verificationsStore";
-import { markStep } from "./onboardingStore";
 import Dropdown from "../components/Dropdown";
 import { toast } from "./toastStore";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
@@ -25,64 +24,58 @@ const PLACEHOLDER = {
 };
 
 const fmtDob = (iso) =>
-  new Date(`${iso}T00:00:00`).toLocaleDateString("en-KE", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-
-const todayISO = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+  iso
+    ? new Date(`${String(iso).slice(0, 10)}T00:00:00`).toLocaleDateString("en-KE", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
 
 export default function Verification() {
+  const { wallet, lookups, walletLoaded } = useSyncExternalStore(subscribe, getState);
   const [type, setType] = useState(LOOKUP_TYPES[0]);
   const [number, setNumber] = useState("");
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState(null); // { entity } | { error }
-  const [ownChecks, setOwnChecks] = useState([]); // lookups run this session
+  const [result, setResult] = useState(null); // { entity, fullName, number } | { error }
 
-  const checks = [...ownChecks, ...LOOKUPS];
-  const wallet = WALLET_BALANCE;
+  useEffect(() => {
+    hydrateVerification();
+  }, []);
+
+  const checkPrice = wallet.checkPrice || CHECK_PRICE;
 
   const stats = useMemo(() => {
-    const thisMonth = checks.filter((c) => c.date.startsWith("2026-07")).length;
-    const verified = checks.filter((c) => c.status === "Verified").length;
+    const monthPrefix = new Date().toISOString().slice(0, 7);
+    const thisMonth = lookups.filter((c) => (c.date || "").startsWith(monthPrefix)).length;
+    const verified = lookups.filter((c) => c.status === "Verified").length;
     return { thisMonth, verified };
-  }, [checks]);
+  }, [lookups]);
 
-  function runCheck(e) {
+  async function runCheck(e) {
     e.preventDefault();
-    if (!number.trim() || checking) return;
+    const num = number.trim();
+    if (!num || checking) return;
     setChecking(true);
     setResult(null);
-    // stand-in for the Dojah lookup call; resolves in a moment
-    setTimeout(() => {
-      const res = lookupIdentity(type, number.trim());
-      setChecking(false);
-      markStep("verify");
-      if (!res.found) {
-        setResult({ error: res.reason });
-        return;
+    try {
+      const res = await runLookup({ type, number: num });
+      if (res.status === "Verified") {
+        setResult({ entity: res.entity, fullName: res.fullName, number: num });
+        toast(`${res.fullName} verified · KES ${checkPrice} from wallet.`);
+      } else {
+        setResult({
+          error:
+            res.status === "Mismatch"
+              ? "The details didn't match that number."
+              : "No record found for that number.",
+        });
       }
-      const e2 = res.entity;
-      const fullName = [e2.firstName, e2.middleName, e2.lastName].filter(Boolean).join(" ");
-      setResult({ entity: e2, fullName });
-      setOwnChecks((prev) => [
-        {
-          id: `CHK-${1043 + prev.length}`,
-          customer: fullName,
-          idType: type,
-          idNumber: number.trim(),
-          status: "Verified",
-          ref: null,
-          date: todayISO(),
-        },
-        ...prev,
-      ]);
-      toast(`${fullName} verified · KES ${CHECK_PRICE} from wallet.`);
-    }, 900);
+    } catch (err) {
+      setResult({ error: err.message });
+    } finally {
+      setChecking(false);
+    }
   }
 
   function reset() {
@@ -90,7 +83,7 @@ export default function Verification() {
     setResult(null);
   }
 
-  const recent = checks.slice(0, 7);
+  const recent = lookups.slice(0, 7);
 
   return (
     <>
@@ -99,7 +92,7 @@ export default function Verification() {
           <p className="stat-label">Checks this month</p>
           <p className="stat-value">{stats.thisMonth}</p>
           <p className="stat-note">
-            KES {(stats.thisMonth * CHECK_PRICE).toLocaleString("en-KE")} from your wallet
+            KES {(stats.thisMonth * checkPrice).toLocaleString("en-KE")} from your wallet
           </p>
         </article>
         <article className="stat-card">
@@ -109,9 +102,11 @@ export default function Verification() {
         </article>
         <article className="stat-card">
           <p className="stat-label">Check wallet</p>
-          <p className="stat-value">KES {wallet.toLocaleString("en-KE")}</p>
+          <p className="stat-value">
+            {walletLoaded ? `KES ${wallet.balance.toLocaleString("en-KE")}` : "…"}
+          </p>
           <p className="stat-note">
-            ≈ {Math.floor(wallet / CHECK_PRICE)} checks ·{" "}
+            ≈ {Math.floor(wallet.balance / checkPrice)} checks ·{" "}
             <Link className="spec-link" to="/dashboard/billing">
               top up
             </Link>
@@ -141,7 +136,7 @@ export default function Verification() {
             {checking ? "Checking…" : "Run check"}
           </button>
         </form>
-        <p className="lookup-cost">KES {CHECK_PRICE} per check, drawn from your wallet.</p>
+        <p className="lookup-cost">KES {checkPrice} per check, drawn from your wallet.</p>
 
         {checking && (
           <div className="lookup-result">
@@ -176,11 +171,11 @@ export default function Verification() {
               </div>
               <div>
                 <dt>Gender</dt>
-                <dd>{result.entity.gender}</dd>
+                <dd>{result.entity.gender || "—"}</dd>
               </div>
               <div>
                 <dt>{type}</dt>
-                <dd className="mono">{result.entity.idNumber}</dd>
+                <dd className="mono">{result.number}</dd>
               </div>
             </dl>
           </div>
@@ -208,14 +203,14 @@ export default function Verification() {
             <h2>Recent checks</h2>
             <p>Renters you've run through Dojah</p>
           </header>
-          {checks.length > 0 && (
+          {lookups.length > 0 && (
             <Link to="/dashboard/verification/all" className="btn btn-ghost toolbar-btn">
               All checks
             </Link>
           )}
         </div>
 
-        {checks.length === 0 ? (
+        {lookups.length === 0 ? (
           <EmptyState
             compact
             icon={EMPTY_ICONS.verification}
@@ -249,7 +244,7 @@ export default function Verification() {
                     </p>
                   </td>
                   <td>{c.idType}</td>
-                  <td className="mono">{maskNumber(c.idNumber)}</td>
+                  <td className="mono">{c.idNumber}</td>
                   <td>
                     <span className={`chip ${STATUS_CHIP[c.status]}`}>{c.status}</span>
                   </td>

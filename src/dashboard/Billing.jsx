@@ -1,7 +1,12 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
-import { CHECK_PRICE, WALLET_BALANCE } from "./verificationsStore";
+import {
+  subscribe as subscribeVerif,
+  getState as getVerifState,
+  hydrateWallet,
+  CHECK_PRICE,
+} from "./verificationsStore";
 import BillingTimeline from "./charts/BillingTimeline";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./overview.css";
@@ -21,15 +26,21 @@ const fmtAmount = (n) => n.toLocaleString("en-KE");
 
 export default function Billing() {
   const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
+  const { wallet: verifWallet } = useSyncExternalStore(subscribeVerif, getVerifState);
 
-  const wallet = WALLET_BALANCE;
+  useEffect(() => {
+    hydrateWallet().catch(() => {});
+  }, []);
+
+  const wallet = verifWallet.balance;
+  const checkPrice = verifWallet.checkPrice || CHECK_PRICE;
   const checksUsed = 0;
   const monthly = vehicles.length * PLAN.launchRate;
 
   // the two bars that make up this month's spend
   const billed = [
     { label: "Vehicles on plan", detail: `${vehicles.length} × KES ${PLAN.launchRate}`, amount: monthly, color: "var(--brand)" },
-    { label: "Renter checks", detail: `${checksUsed} × KES ${CHECK_PRICE} · from wallet`, amount: checksUsed * CHECK_PRICE, color: "#d97706" },
+    { label: "Renter checks", detail: `${checksUsed} × KES ${checkPrice} · from wallet`, amount: checksUsed * checkPrice, color: "#d97706" },
   ];
   const totalSpend = billed.reduce((s, b) => s + b.amount, 0);
 
@@ -100,7 +111,7 @@ export default function Billing() {
             <div>
               <p className="wallet-label">Check wallet</p>
               <p className="wallet-sub">
-                KES {fmtAmount(wallet)} · ≈ {Math.floor(wallet / CHECK_PRICE)} checks left
+                KES {fmtAmount(wallet)} · ≈ {Math.floor(wallet / checkPrice)} checks left
               </p>
             </div>
             <a className="btn wallet-btn" href={PAYSTACK_LINK} target="_blank" rel="noreferrer">

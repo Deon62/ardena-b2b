@@ -8,12 +8,14 @@ import { getSession, setSession, clearSession } from "./authStore";
 import { resetBusiness } from "../dashboard/businessStore";
 import { resetOnboarding } from "../dashboard/onboardingStore";
 import { resetFleet } from "../dashboard/fleetStore";
+import { resetVerification } from "../dashboard/verificationsStore";
 
 // locally cached per-account state, wiped whenever the session changes hands
 function resetLocalCaches() {
   resetBusiness();
   resetOnboarding();
   resetFleet();
+  resetVerification();
 }
 
 const BASE =
@@ -73,8 +75,8 @@ function refreshSession() {
   return refreshing;
 }
 
-async function request(path, { method = "GET", body, auth = true } = {}, retried = false) {
-  const headers = {};
+async function request(path, { method = "GET", body, auth = true, headers: extra } = {}, retried = false) {
+  const headers = { ...extra };
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
   if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
   const { token } = getSession();
@@ -93,7 +95,7 @@ async function request(path, { method = "GET", body, auth = true } = {}, retried
 
   if (res.status === 401 && auth) {
     if (!retried && (await refreshSession())) {
-      return request(path, { method, body, auth }, true);
+      return request(path, { method, body, auth, headers: extra }, true);
     }
     clearSession(); // bounces the app back to /login via RequireAuth
   }
@@ -234,4 +236,55 @@ export async function fetchMe() {
 
 export function fetchOnboarding() {
   return request("/onboarding");
+}
+
+/* ---- Identity verification (KYC) ---- */
+
+// { type: "national_id" | "drivers_licence" | "kra_pin", number, client_id?,
+// booking_ref? } -> { id, status, entity, charged, wallet_balance, date }.
+// Debits the wallet, so it takes an idempotency key.
+export function verificationLookup(payload, idempotencyKey) {
+  return request("/verification/lookup", {
+    method: "POST",
+    body: payload,
+    headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+  });
+}
+
+// History, numbers masked server-side. params: { page, per_page }
+export function fetchLookups(params = {}) {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v != null && v !== "")
+  ).toString();
+  return request(`/verification/lookups${qs ? `?${qs}` : ""}`);
+}
+
+export function fetchWallet() {
+  return request("/verification/wallet");
+}
+
+// { amount, method: "mpesa" | "card", phone? } -> payment init
+// (STK push or Paystack checkout URL). Money-moving: idempotency key.
+export function topupWallet(payload, idempotencyKey) {
+  return request("/verification/wallet/topup", {
+    method: "POST",
+    body: payload,
+    headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : undefined,
+  });
+}
+
+// Poll a top-up's status after returning from checkout / an STK prompt
+export function verifyTopup(reference) {
+  return request("/verification/wallet/topup/verify", {
+    method: "POST",
+    body: { reference },
+  });
+}
+
+// Top-ups and per-check debits. params: { page, per_page }
+export function fetchWalletTransactions(params = {}) {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v != null && v !== "")
+  ).toString();
+  return request(`/verification/wallet/transactions${qs ? `?${qs}` : ""}`);
 }

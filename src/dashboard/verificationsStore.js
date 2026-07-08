@@ -1,16 +1,20 @@
-// Walk-in verification via Dojah lookups. The renter is present in person, so
-// there's no selfie/liveness widget: staff type the National ID, Driver's
-// Licence or KRA PIN number and we look it up against the registry.
+// Walk-in renter verification, backed by the live KYC API (docs/backend-api.md
+// §6). The renter is present in person, so there's no selfie/liveness widget:
+// staff type a National ID, Driver's Licence or KRA PIN and the backend proxies
+// Dojah, debiting a flat price per lookup from a prepaid wallet.
 //
-// Live endpoints (Dojah, headers: AppId + Authorization = secret key):
-//   National ID     GET /api/v1/ke/kyc/id?id=<number>
-//   Driver's Licence GET /api/v1/ke/kyc/dl?license_number=<number>
-//   KRA PIN         GET /api/v1/ke/kyc/kra?pin=<number>
-// Each returns an `entity` with the person's registry details.
+// Numbers are masked server-side in the history; session lookups are masked
+// here from the number staff typed (the API never returns the raw number back).
+import {
+  verificationLookup,
+  fetchLookups,
+  fetchWallet,
+  topupWallet,
+  verifyTopup as apiVerifyTopup,
+} from "../lib/api";
+import { markStep } from "./onboardingStore";
 
-// Pay-as-you-go: flat price per lookup, drawn from a prepaid wallet
-export const CHECK_PRICE = 100; // KES
-export const WALLET_BALANCE = 0; // KES, real balance comes with the wallet API
+export const CHECK_PRICE = 100; // KES, fallback until the wallet API reports it
 
 export const LOOKUP_TYPES = ["National ID", "Driver's Licence", "KRA PIN"];
 
@@ -20,19 +24,54 @@ export const STATUS_CHIP = {
   Mismatch: "pending",
 };
 
-// Lookup history, populated by the verification API when it ships
-export const LOOKUPS = [];
+// UI labels <-> API slugs
+const TYPE_SLUG = {
+  "National ID": "national_id",
+  "Driver's Licence": "drivers_licence",
+  "KRA PIN": "kra_pin",
+};
+const SLUG_LABEL = {
+  national_id: "National ID",
+  drivers_licence: "Driver's Licence",
+  kra_pin: "KRA PIN",
+};
 
-// Mock registry lookup: deterministic result per number so the demo feels
-// real. Swap this for the live Dojah call (returns the `entity` object).
-const POOL = [
-  { firstName: "Wanjiku", middleName: "Njeri", lastName: "Kamau", gender: "Female", dob: "1991-04-12" },
-  { firstName: "Kevin", middleName: "Otieno", lastName: "Omondi", gender: "Male", dob: "1988-11-03" },
-  { firstName: "Grace", middleName: "Akinyi", lastName: "Achieng", gender: "Female", dob: "1994-07-21" },
-  { firstName: "Samuel", middleName: "Kipchoge", lastName: "Kiptoo", gender: "Male", dob: "1985-02-16" },
-  { firstName: "Faith", middleName: "Wanjiru", lastName: "Njeri", gender: "Female", dob: "1996-09-30" },
-  { firstName: "Brian", middleName: "Mwangi", lastName: "Kariuki", gender: "Male", dob: "1990-05-08" },
-];
+let state = {
+  wallet: { balance: 0, checkPrice: CHECK_PRICE },
+  lookups: [], // { id, customer, idType, idNumber (masked), status, ref, date }
+  walletLoaded: false,
+  lookupsLoaded: false,
+};
+
+const listeners = new Set();
+
+function emit() {
+  listeners.forEach((fn) => fn());
+}
+
+export function subscribe(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+export function getState() {
+  return state;
+}
+
+function set(patch) {
+  state = { ...state, ...patch };
+  emit();
+}
+
+export function resetVerification() {
+  state = {
+    wallet: { balance: 0, checkPrice: CHECK_PRICE },
+    lookups: [],
+    walletLoaded: false,
+    lookupsLoaded: false,
+  };
+  emit();
+}
 
 // show the first 2 and last 2 characters, mask the middle (privacy)
 export function maskNumber(n) {
@@ -41,20 +80,105 @@ export function maskNumber(n) {
   return `${s.slice(0, 2)}${"•".repeat(Math.max(3, s.length - 4))}${s.slice(-2)}`;
 }
 
-export function lookupIdentity(type, number) {
-  const digits = String(number).replace(/\D/g, "");
-  if (digits.length < 6) {
-    return { found: false, reason: "That number looks too short. Check and try again." };
-  }
-  const sum = digits.split("").reduce((a, c) => a + Number(c), 0);
-  const p = POOL[sum % POOL.length];
+// API dates may be full ISO timestamps; fmtDate wants a bare "YYYY-MM-DD"
+function toDay(value) {
+  return typeof value === "string" ? value.slice(0, 10) : "";
+}
+
+// Map a GET /lookups row (numbers already masked) to the UI shape
+function normalizeHistory(r) {
   return {
-    found: true,
-    entity: {
-      ...p,
-      idType: type,
-      idNumber: number,
-      matched: true,
-    },
+    id: r.id,
+    customer: r.customer,
+    idType: SLUG_LABEL[r.id_type] || r.id_type,
+    idNumber: r.id_number_masked,
+    status: r.status,
+    ref: r.booking_ref || null,
+    date: toDay(r.date),
   };
+}
+
+const uid = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+/* ---- hydration ---- */
+
+export async function hydrateWallet() {
+  const w = await fetchWallet();
+  set({
+    wallet: {
+      balance: Number(w.balance) || 0,
+      checkPrice: Number(w.check_price) || CHECK_PRICE,
+    },
+    walletLoaded: true,
+  });
+}
+
+export async function hydrateLookups() {
+  const res = await fetchLookups({ per_page: 100 });
+  const rows = Array.isArray(res) ? res : res?.data || [];
+  set({ lookups: rows.map(normalizeHistory), lookupsLoaded: true });
+}
+
+// wallet + history together, for the Verification screen
+export function hydrateVerification() {
+  return Promise.all([hydrateWallet().catch(() => {}), hydrateLookups().catch(() => {})]);
+}
+
+/* ---- actions ---- */
+
+// Run a lookup. Returns { status, entity, fullName } for the result card.
+// Throws ApiError (e.g. insufficient wallet balance) for the caller to surface.
+export async function runLookup({ type, number, clientId, bookingRef }) {
+  const res = await verificationLookup(
+    {
+      type: TYPE_SLUG[type] || type,
+      number: String(number).trim(),
+      client_id: clientId ?? undefined,
+      booking_ref: bookingRef ?? undefined,
+    },
+    uid()
+  );
+
+  const entity = res.entity || null;
+  const fullName = entity
+    ? [entity.first_name, entity.middle_name, entity.last_name].filter(Boolean).join(" ")
+    : "Unknown";
+
+  const record = {
+    id: res.id,
+    customer: fullName,
+    idType: type,
+    idNumber: maskNumber(String(number).trim()),
+    status: res.status,
+    ref: bookingRef || null,
+    date: toDay(res.date) || new Date().toISOString().slice(0, 10),
+  };
+
+  set({
+    lookups: [record, ...state.lookups],
+    wallet:
+      res.wallet_balance != null
+        ? { ...state.wallet, balance: Number(res.wallet_balance) }
+        : state.wallet,
+  });
+  markStep("verify"); // the server flips it too; this keeps the checklist instant
+
+  return { status: res.status, entity, fullName, charged: res.charged };
+}
+
+// Start a wallet top-up: { amount, method: "mpesa" | "card", phone? }.
+// Returns { reference, checkout_url, ... } — card gives a URL, M-Pesa an STK push.
+export function startTopup(payload) {
+  return topupWallet(payload, uid());
+}
+
+export async function verifyTopup(reference) {
+  const res = await apiVerifyTopup(reference);
+  if (res?.status && /success|paid|complete/i.test(res.status)) {
+    await hydrateWallet().catch(() => {});
+  }
+  return res;
 }
