@@ -1,16 +1,19 @@
-// Ardena B2B API client. Auth + onboarding endpoints are live; the other
-// modules keep local stores until their endpoints ship (docs/backend-api.md).
+// Ardena B2B API client. Auth, onboarding, business and fleet endpoints are
+// live; the other modules keep local stores until their endpoints ship
+// (docs/backend-api.md).
 //
 // The backend is FastAPI: errors come back as { detail: string } or
 // { detail: [{ loc, msg }, ...] } for validation failures.
 import { getSession, setSession, clearSession } from "./authStore";
 import { resetBusiness } from "../dashboard/businessStore";
 import { resetOnboarding } from "../dashboard/onboardingStore";
+import { resetFleet } from "../dashboard/fleetStore";
 
 // locally cached per-account state, wiped whenever the session changes hands
 function resetLocalCaches() {
   resetBusiness();
   resetOnboarding();
+  resetFleet();
 }
 
 const BASE =
@@ -181,6 +184,42 @@ export function updatePolicy(patch) {
 // public trust page ("Ardena Verified"); 404s for unknown slugs
 export function fetchTrust(slug) {
   return request(`/trust/${encodeURIComponent(slug)}`, { auth: false });
+}
+
+/* ---- Fleet ---- */
+
+// List vehicles; params: { status, cat, search, page, per_page }
+export function fetchVehicles(params = {}) {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v != null && v !== "")
+  ).toString();
+  return request(`/vehicles${qs ? `?${qs}` : ""}`);
+}
+
+export function createVehicle(payload) {
+  return request("/vehicles", { method: "POST", body: payload });
+}
+
+export function fetchVehicle(plate) {
+  return request(`/vehicles/${encodeURIComponent(plate)}`);
+}
+
+export function updateVehicle(plate, patch) {
+  return request(`/vehicles/${encodeURIComponent(plate)}`, {
+    method: "PATCH",
+    body: patch,
+  });
+}
+
+// 409s if the vehicle has an active booking — surface the message to the user
+export function deleteVehicle(plate) {
+  return request(`/vehicles/${encodeURIComponent(plate)}`, { method: "DELETE" });
+}
+
+// Booked date ranges for the availability calendar
+export function fetchVehicleAvailability(plate, from, to) {
+  const qs = new URLSearchParams({ from, to }).toString();
+  return request(`/vehicles/${encodeURIComponent(plate)}/availability?${qs}`);
 }
 
 /* ---- Me & onboarding ---- */

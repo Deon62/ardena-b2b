@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { addVehicle, getVehicle, formatDateInput } from "./fleetStore";
+import { addVehicle, getVehicle } from "./fleetStore";
 import Dropdown from "../components/Dropdown";
 import DatePicker from "./DatePicker";
 import { todayISO } from "./bookingsStore";
@@ -12,12 +12,13 @@ const CATEGORIES = ["SUV", "Saloon", "Hatchback", "Van", "Pickup"];
 export default function AddVehicle() {
   const navigate = useNavigate();
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [cat, setCat] = useState("SUV");
   const [vStatus, setVStatus] = useState("Available");
   const [ins, setIns] = useState("");
   const [inspection, setInspection] = useState("");
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const form = e.currentTarget;
     const f = new FormData(form);
@@ -33,17 +34,25 @@ export default function AddVehicle() {
       return;
     }
 
-    addVehicle({
-      name: f.get("name").trim(),
-      plate,
-      cat: f.get("cat"),
-      rate: Number(f.get("rate")),
-      status: f.get("status"),
-      ins: formatDateInput(f.get("ins")),
-      inspection: formatDateInput(f.get("inspection")),
-      added: "3 Jul 2026",
-      notes: f.get("notes").trim(),
-    });
+    setSaving(true);
+    try {
+      // dates go to the API as ISO (the pickers hold ISO values)
+      await addVehicle({
+        name: f.get("name").trim(),
+        plate,
+        cat: f.get("cat"),
+        rate: Number(f.get("rate")),
+        status: f.get("status"),
+        ins: f.get("ins"),
+        inspection: f.get("inspection") || null,
+        notes: f.get("notes").trim(),
+      });
+    } catch (err) {
+      setError(err.message);
+      return;
+    } finally {
+      setSaving(false);
+    }
 
     toast(`${plate} added to your fleet.`);
     if (stay) {
@@ -156,10 +165,10 @@ export default function AddVehicle() {
               <p>Save this vehicle or discard it</p>
             </header>
             <div className="action-stack">
-              <button type="submit" form="add-vehicle-form" className="btn btn-primary">
-                Add to fleet
+              <button type="submit" form="add-vehicle-form" className="btn btn-primary" disabled={saving}>
+                {saving ? "Adding…" : "Add to fleet"}
               </button>
-              <button type="submit" form="add-vehicle-form" name="again" className="btn btn-ghost">
+              <button type="submit" form="add-vehicle-form" name="again" className="btn btn-ghost" disabled={saving}>
                 Save &amp; add another
               </button>
               <Link to="/dashboard/fleet" className="btn btn-ghost">

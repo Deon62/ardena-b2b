@@ -19,6 +19,7 @@ import {
 } from "./businessStore";
 import { hydrateOnboarding } from "./onboardingStore";
 import { hydratePolicy } from "./policyStore";
+import { hydrateFleet } from "./fleetStore";
 import {
   fetchMe,
   fetchBusiness,
@@ -45,9 +46,10 @@ export default function DashboardLayout() {
   const supportUnread = useSyncExternalStore(subscribeSupport, getSupportState).unread;
   const business = useSyncExternalStore(subscribeBusiness, getBusiness);
 
-  // hydrate the session: profile, business, policy + onboarding from the API
+  // hydrate the session: profile, business, policy, onboarding + fleet
   useEffect(() => {
     let alive = true;
+    hydrateFleet().catch(() => {}); // every page reads the fleet store
     (async () => {
       try {
         const { user, business: biz } = await fetchMe();

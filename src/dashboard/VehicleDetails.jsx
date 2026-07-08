@@ -6,6 +6,7 @@ import {
   getVehicle,
   removeVehicle,
   expiringSoon,
+  isFleetLoaded,
 } from "./fleetStore";
 import { getBookings } from "./bookingsStore";
 import { downloadVehicleStatement } from "./pdf";
@@ -32,6 +33,7 @@ const UPCOMING = [
 
 export default function VehicleDetails() {
   useSyncExternalStore(subscribe, getVehicles); // re-render on store changes
+  const loaded = useSyncExternalStore(subscribe, isFleetLoaded);
   const { plate } = useParams();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
@@ -48,7 +50,7 @@ export default function VehicleDetails() {
           </svg>
         </Link>
         <div className="empty-block fleet-empty">
-          <p>This vehicle is no longer in your fleet.</p>
+          <p>{loaded ? "This vehicle is no longer in your fleet." : "Loading vehicle…"}</p>
         </div>
       </>
     );
@@ -84,10 +86,15 @@ export default function VehicleDetails() {
               <button
                 type="button"
                 className="icon-btn danger"
-                onClick={() => {
-                  removeVehicle(v.plate);
-                  toast(`${v.name} (${v.plate}) removed from the fleet.`, "danger");
-                  navigate("/dashboard/fleet");
+                onClick={async () => {
+                  setConfirming(false);
+                  try {
+                    await removeVehicle(v.plate);
+                    toast(`${v.name} (${v.plate}) removed from the fleet.`, "danger");
+                    navigate("/dashboard/fleet");
+                  } catch (err) {
+                    toast(err.message, "danger");
+                  }
                 }}
               >
                 Yes

@@ -1,6 +1,6 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
-import { subscribe, getVehicles, removeVehicle } from "./fleetStore";
+import { subscribe, getVehicles, removeVehicle, isFleetLoaded } from "./fleetStore";
 import { toast } from "./toastStore";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import "./fleet.css";
@@ -17,6 +17,7 @@ const fmtRate = (r) => r.toLocaleString("en-KE");
 
 export default function Fleet() {
   const vehicles = useSyncExternalStore(subscribe, getVehicles);
+  const loaded = useSyncExternalStore(subscribe, isFleetLoaded);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
   const [confirming, setConfirming] = useState(null);
@@ -72,7 +73,13 @@ export default function Fleet() {
         </article>
       </div>
 
-      {vehicles.length === 0 ? (
+      {!loaded && vehicles.length === 0 ? (
+        <section className="panel-card">
+          <div className="empty-block fleet-empty">
+            <p>Loading your fleet…</p>
+          </div>
+        </section>
+      ) : vehicles.length === 0 ? (
         <section className="panel-card">
           <EmptyState
             icon={EMPTY_ICONS.fleet}
@@ -153,10 +160,14 @@ export default function Fleet() {
                         <button
                           type="button"
                           className="icon-btn danger"
-                          onClick={() => {
-                            removeVehicle(v.plate);
+                          onClick={async () => {
                             setConfirming(null);
-                            toast(`${v.name} (${v.plate}) removed from the fleet.`, "danger");
+                            try {
+                              await removeVehicle(v.plate);
+                              toast(`${v.name} (${v.plate}) removed from the fleet.`, "danger");
+                            } catch (err) {
+                              toast(err.message, "danger");
+                            }
                           }}
                         >
                           Yes
