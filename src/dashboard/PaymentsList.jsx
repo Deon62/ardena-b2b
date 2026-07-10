@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchPayments, refundPayment, sendPaymentLink } from "../lib/api";
+import { fetchPayments, refundPayment } from "../lib/api";
 import { PAY_CHIP } from "./Bookings";
 import { fmtAmount } from "./Payments";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
@@ -69,24 +69,6 @@ export default function PaymentsList() {
     }
   }
 
-  async function handleSendLink(p) {
-    if (busy) return;
-    setBusy(p.id);
-    try {
-      const result = await sendPaymentLink(p.booking_ref);
-      if (result.checkout_url) {
-        window.open(result.checkout_url, "_blank", "noopener,noreferrer");
-        toast("Payment link opened — share it with the customer.");
-      } else {
-        toast(result.message || "Payment link created.");
-      }
-      await load();
-    } catch (err) {
-      toast(err.message || "Failed to send payment link", "danger");
-    } finally {
-      setBusy(null);
-    }
-  }
 
   return (
     <>
@@ -207,15 +189,13 @@ export default function PaymentsList() {
                         {busy === p.id ? "…" : "Refund"}
                       </button>
                     )}
-                    {p.status === "pending" && p.type === "payment" && (
-                      <button
-                        type="button"
+                    {p.status === "pending" && p.type === "payment" && p.booking_ref && (
+                      <Link
                         className="icon-btn prompt-green"
-                        disabled={busy === p.id}
-                        onClick={() => handleSendLink(p)}
+                        to={`/dashboard/bookings/${encodeURIComponent(p.booking_ref)}`}
                       >
-                        {busy === p.id ? "…" : "Resend link"}
-                      </button>
+                        Request payment
+                      </Link>
                     )}
                     <Link
                       className="icon-btn"
