@@ -1,39 +1,92 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  subscribe,
-  getBookings,
-  setPayment,
-  fmtRange,
-  rentalDays,
-} from "./bookingsStore";
+import { fetchPayments, refundPayment, sendPaymentLink } from "../lib/api";
 import { PAY_CHIP } from "./Bookings";
-import { fmtAmount, receiptFor } from "./Payments";
+import { fmtAmount } from "./Payments";
+import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import { toast } from "./toastStore";
 import "./fleet.css";
 import "./bookings.css";
 import "./payments.css";
 
-const FILTERS = ["All", "Paid", "Prompt sent", "Unpaid", "Refunded"];
+const TYPE_FILTERS = ["All", "payment", "refund"];
+const STATUS_FILTERS = ["All", "completed", "pending", "failed"];
+
+const STATUS_CHIP = {
+  completed: "active",
+  pending: "pending",
+  failed: "cancelled",
+};
 
 export default function PaymentsList() {
-  const bookings = useSyncExternalStore(subscribe, getBookings);
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [busy, setBusy] = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await fetchPayments({ per_page: 100 });
+      setPayments(data.data || []);
+    } catch (err) {
+      toast(err.message || "Failed to load payments", "danger");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return bookings.filter((b) => {
-      if (filter !== "All" && b.payment !== filter) return false;
+    return payments.filter((p) => {
+      if (typeFilter !== "All" && p.type !== typeFilter) return false;
+      if (statusFilter !== "All" && p.status !== statusFilter) return false;
       if (!q) return true;
       return (
-        b.customer.toLowerCase().includes(q) ||
-        b.ref.toLowerCase().includes(q) ||
-        b.vehicle.toLowerCase().includes(q) ||
-        b.plate.toLowerCase().includes(q)
+        (p.customer || "").toLowerCase().includes(q) ||
+        p.reference.toLowerCase().includes(q) ||
+        p.booking_ref.toLowerCase().includes(q)
       );
     });
-  }, [bookings, query, filter]);
+  }, [payments, query, typeFilter, statusFilter]);
+
+  async function handleRefund(p) {
+    if (busy) return;
+    setBusy(p.id);
+    try {
+      await refundPayment(p.id);
+      toast(`Refund initiated for ${p.reference}.`);
+      await load();
+    } catch (err) {
+      toast(err.message || "Refund failed", "danger");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleSendLink(p) {
+    if (busy) return;
+    setBusy(p.id);
+    try {
+      const result = await sendPaymentLink(p.booking_ref);
+      if (result.checkout_url) {
+        window.open(result.checkout_url, "_blank", "noopener,noreferrer");
+        toast("Payment link opened — share it with the customer.");
+      } else {
+        toast(result.message || "Payment link created.");
+      }
+      await load();
+    } catch (err) {
+      toast(err.message || "Failed to send payment link", "danger");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <>
@@ -60,96 +113,121 @@ export default function PaymentsList() {
             </svg>
             <input
               type="search"
-              placeholder="Search customer, ref, vehicle or plate"
+              placeholder="Search customer, reference or booking"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               aria-label="Search payments"
             />
           </div>
-          <div className="seg" role="group" aria-label="Filter by payment status">
-            {FILTERS.map((f) => (
+          <div className="seg" role="group" aria-label="Filter by type">
+            {TYPE_FILTERS.map((f) => (
               <button
                 key={f}
                 type="button"
-                className={f === filter ? "active" : ""}
-                onClick={() => setFilter(f)}
+                className={f === typeFilter ? "active" : ""}
+                onClick={() => setTypeFilter(f)}
               >
-                {f}
+                {f === "All" ? "All types" : f.charAt(0).toUpperCase() + f.slice(1) + "s"}
+              </button>
+            ))}
+          </div>
+          <div className="seg" role="group" aria-label="Filter by status">
+            {STATUS_FILTERS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={f === statusFilter ? "active" : ""}
+                onClick={() => setStatusFilter(f)}
+              >
+                {f === "All" ? "All statuses" : f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
           </div>
         </div>
 
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Customer</th>
-              <th>Vehicle</th>
-              <th>Booking dates</th>
-              <th className="num">Amount</th>
-              <th>Receipt</th>
-              <th>Status</th>
-              <th className="actions-col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((b) => {
-              const amount = rentalDays(b.pickup, b.dropoff) * b.rate;
-              const canPrompt =
-                b.payment !== "Paid" &&
-                b.payment !== "Refunded" &&
-                b.status !== "Cancelled" &&
-                b.status !== "Completed";
-              return (
-                <tr key={b.ref}>
+        {loading ? (
+          <div className="empty-block fleet-empty"><p>Loading…</p></div>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            compact
+            icon={EMPTY_ICONS.payments}
+            title="No payments found"
+            message="No payments match your current filters."
+          />
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Reference</th>
+                <th>Booking</th>
+                <th>Customer</th>
+                <th className="num">Amount (KES)</th>
+                <th>Receipt</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th className="actions-col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p) => (
+                <tr key={p.id}>
                   <td>
-                    <p className="strong">{b.customer}</p>
-                    <p className="cell-sub">{b.ref}</p>
+                    <p className="strong">{p.reference}</p>
+                    <p className="cell-sub">{p.paystack_reference || "—"}</p>
                   </td>
                   <td>
-                    <p>{b.vehicle}</p>
-                    <p className="cell-sub">{b.plate}</p>
+                    <Link
+                      className="spec-link"
+                      to={`/dashboard/bookings/${encodeURIComponent(p.booking_ref)}`}
+                    >
+                      {p.booking_ref}
+                    </Link>
                   </td>
-                  <td>{fmtRange(b.pickup, b.dropoff)}</td>
-                  <td className="num">{fmtAmount(amount)}</td>
+                  <td>{p.customer || "—"}</td>
+                  <td className="num">{fmtAmount(p.amount)}</td>
+                  <td>{p.receipt || "—"}</td>
                   <td>
-                    {b.payment === "Paid" || b.payment === "Refunded"
-                      ? receiptFor(b.ref)
-                      : "—"}
+                    <span className={`chip ${p.type === "refund" ? "cancelled" : "active"}`}>
+                      {p.type}
+                    </span>
                   </td>
                   <td>
-                    <span className={`chip ${PAY_CHIP[b.payment]}`}>{b.payment}</span>
+                    <span className={`chip ${STATUS_CHIP[p.status] || "pending"}`}>
+                      {p.status}
+                    </span>
                   </td>
                   <td className="actions-cell">
-                    {canPrompt && (
+                    {p.status === "completed" && p.type === "payment" && (
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        disabled={busy === p.id}
+                        onClick={() => handleRefund(p)}
+                      >
+                        {busy === p.id ? "…" : "Refund"}
+                      </button>
+                    )}
+                    {p.status === "pending" && p.type === "payment" && (
                       <button
                         type="button"
                         className="icon-btn prompt-green"
-                        onClick={() => {
-                          setPayment(b.ref, "Prompt sent");
-                          toast(`M-Pesa prompt sent to ${b.customer}.`);
-                        }}
+                        disabled={busy === p.id}
+                        onClick={() => handleSendLink(p)}
                       >
-                        {b.payment === "Prompt sent" ? "Resend prompt" : "Send prompt"}
+                        {busy === p.id ? "…" : "Resend link"}
                       </button>
                     )}
                     <Link
                       className="icon-btn"
-                      to={`/dashboard/bookings/${encodeURIComponent(b.ref)}`}
+                      to={`/dashboard/bookings/${encodeURIComponent(p.booking_ref)}`}
                     >
                       View
                     </Link>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-
-        {filtered.length === 0 && (
-          <div className="empty-block fleet-empty">
-            <p>No payments match your search.</p>
-          </div>
+              ))}
+            </tbody>
+          </table>
         )}
       </section>
     </>

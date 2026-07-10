@@ -5,8 +5,6 @@ import {
   getVehicles,
 } from "./fleetStore";
 import {
-  addBooking,
-  getBookings,
   rentalDays,
   fmtDate,
   todayISO,
@@ -16,6 +14,7 @@ import {
   subscribe as subscribeAvail,
   getBlocked,
 } from "./availabilityStore";
+import { createBooking, fetchVehicleAvailability } from "../lib/api";
 import DateRangePicker from "./DateRangePicker";
 import Dropdown from "../components/Dropdown";
 import { toast } from "./toastStore";
@@ -35,6 +34,7 @@ export default function NewBooking() {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [datesOpen, setDatesOpen] = useState(false);
   const datesRef = useRef(null);
 
@@ -45,27 +45,10 @@ export default function NewBooking() {
   const vehicle = bookable.find((v) => v.plate === plate);
   const blockedMap = useSyncExternalStore(subscribeAvail, getBlocked);
 
-  // days already taken by live bookings, or blocked on the availability
-  // calendar, for the chosen vehicle
+  // days blocked on the availability calendar for the chosen vehicle
   const bookedDays = useMemo(() => {
-    const days = new Set(blockedMap[plate] || []);
-    if (!plate) return days;
-    getBookings()
-      .filter(
-        (b) =>
-          b.plate === plate &&
-          ["Pending", "Confirmed", "Active"].includes(b.status)
-      )
-      .forEach((b) => {
-        const cur = new Date(`${b.pickup}T00:00:00`);
-        const stop = new Date(`${b.dropoff}T00:00:00`);
-        while (cur <= stop) {
-          days.add(isoOf(cur));
-          cur.setDate(cur.getDate() + 1);
-        }
-      });
-    return days;
-  }, [plate, vehicles, blockedMap]);
+    return new Set(blockedMap[plate] || []);
+  }, [plate, blockedMap]);
 
   // switching vehicles can invalidate an already-picked range
   useEffect(() => {
@@ -97,30 +80,33 @@ export default function NewBooking() {
   const days = datesValid ? rentalDays(pickup, dropoff) : 0;
   const total = vehicle && datesValid ? days * vehicle.rate : null;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (!datesValid) {
       setError("Pick the pickup and return dates.");
       return;
     }
+    if (submitting) return;
+    setSubmitting(true);
     const f = new FormData(e.currentTarget);
     const deposit = f.get("deposit");
-    const ref = addBooking({
-      customer: f.get("customer").trim(),
-      phone: f.get("phone").trim(),
-      vehicle: vehicle.name,
-      plate: vehicle.plate,
-      pickup,
-      dropoff,
-      location: f.get("location").trim(),
-      rate: vehicle.rate,
-      created: todayISO(),
-      notes: f.get("notes").trim(),
-      // per-booking deposit is optional; blank falls back to the policy default
-      ...(deposit ? { depositAmount: Number(deposit) } : {}),
-    });
-    toast(`Booking ${ref} created, pending confirmation.`);
-    navigate(`/dashboard/bookings/${encodeURIComponent(ref)}`);
+    try {
+      const booking = await createBooking({
+        customer: f.get("customer").trim(),
+        phone: f.get("phone").trim(),
+        plate: vehicle.plate,
+        pickup,
+        dropoff,
+        location: f.get("location").trim(),
+        notes: f.get("notes").trim() || null,
+        ...(deposit ? { deposit_amount: Number(deposit) } : {}),
+      });
+      toast(`Booking ${booking.ref} created, pending confirmation.`);
+      navigate(`/dashboard/bookings/${encodeURIComponent(booking.ref)}`);
+    } catch (err) {
+      setError(err.message || "Failed to create booking. Try again.");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -228,8 +214,8 @@ export default function NewBooking() {
         {error && <p className="form-error">{error}</p>}
 
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary">
-            Create booking
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {submitting ? "Creating…" : "Create booking"}
           </button>
           <Link to="/dashboard/bookings" className="btn btn-ghost">
             Cancel
