@@ -5,6 +5,7 @@ import usePageTitle from "../hooks/usePageTitle";
 import SiteNav from "../components/SiteNav";
 import SiteFooter from "../components/SiteFooter";
 import PricingPlans from "../components/PricingPlans";
+import HeroOrbit from "../components/HeroOrbit";
 import { MODULES, RATE, LAUNCH_RATE } from "./pricingData";
 import "./landing.css";
 
@@ -56,8 +57,9 @@ export default function Landing() {
     <div className="landing">
       <SiteNav />
 
-      {/* ---- Hero (white) ---- */}
+      {/* ---- Hero (clean, animated flow field) ---- */}
       <section className="panel hero">
+        <HeroOrbit />
         <div className="hero-body">
           <div className="hero-copy">
             <h1>
@@ -71,11 +73,11 @@ export default function Landing() {
               no heavy setup.
             </p>
             <div className="hero-cta">
-              <Link to="/login" className="btn btn-primary inverse">
-                Sign in
-              </Link>
-              <Link to="/signup" className="btn btn-brand">
+              <Link to="/signup" className="btn btn-primary">
                 Request access
+              </Link>
+              <Link to="/login" className="btn btn-ghost">
+                Sign in
               </Link>
             </div>
           </div>
