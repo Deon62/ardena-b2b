@@ -57,6 +57,7 @@ export default function BookingDetails() {
   const [retTime, setRetTime] = useState("10:00");
   const [outFuel, setOutFuel] = useState("Full");
   const [inFuel, setInFuel] = useState("Full");
+  const [payLink, setPayLink] = useState(null);
 
   const decodedRef = decodeURIComponent(ref);
 
@@ -193,17 +194,23 @@ export default function BookingDetails() {
   async function handlePaymentLink() {
     if (busy) return;
     setBusy(true);
+    // Open a blank window now (synchronous, trusted user gesture) so the
+    // popup blocker doesn't kill it after the await below.
+    const win = window.open("", "_blank", "noopener,noreferrer");
     try {
       const result = await sendPaymentLink(b.ref);
       const updated = await fetchBooking(b.ref);
       setB(updated);
       if (result.checkout_url) {
-        window.open(result.checkout_url, "_blank", "noopener,noreferrer");
-        toast("Payment link opened — share it with the customer or let them pay directly.");
+        if (win && !win.closed) win.location.href = result.checkout_url;
+        setPayLink(result.checkout_url);
+        toast("Payment link ready — share it with the customer.");
       } else {
+        if (win) win.close();
         toast(result.message || "Payment link created.", result.success ? undefined : "danger");
       }
     } catch (err) {
+      if (win) win.close();
       toast(err.message || "Failed to create payment link", "danger");
     } finally {
       setBusy(false);
@@ -518,8 +525,20 @@ export default function BookingDetails() {
                   {b.payment === "Prompt sent" ? "Resend payment link" : "Send payment link"}
                 </button>
                 <p className="side-hint">
-                  Opens a Paystack checkout page for KES {fmtAmount(total)}. Share the link with {b.customer} to collect payment online.
+                  Generates a Paystack checkout page for KES {fmtAmount(total)}. Share the link with {b.customer} to collect payment online.
                 </p>
+                {payLink && (
+                  <div className="pay-link-box">
+                    <a href={payLink} target="_blank" rel="noopener noreferrer" className="pay-link-url">{payLink}</a>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => { navigator.clipboard.writeText(payLink); toast("Link copied!"); }}
+                    >
+                      Copy link
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </section>
