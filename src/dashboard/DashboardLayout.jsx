@@ -3,14 +3,6 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { NAV_SECTIONS } from "./nav";
 import { ICONS } from "./icons";
 import {
-  subscribe as subscribeNotifs,
-  getNotifications,
-} from "./notificationsStore";
-import {
-  subscribe as subscribeSupport,
-  getState as getSupportState,
-} from "./supportStore";
-import {
   subscribe as subscribeBusiness,
   getBusiness,
   setBusiness,
@@ -25,6 +17,8 @@ import {
   fetchBusiness,
   fetchPolicy,
   fetchOnboarding,
+  fetchUnreadCount,
+  fetchSupportUnread,
   logout,
 } from "../lib/api";
 import Logo from "../components/Logo";
@@ -41,9 +35,8 @@ export default function DashboardLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const footRef = useRef(null);
 
-  const notifications = useSyncExternalStore(subscribeNotifs, getNotifications);
-  const unread = notifications.filter((n) => !n.read).length;
-  const supportUnread = useSyncExternalStore(subscribeSupport, getSupportState).unread;
+  const [unread, setUnread] = useState(0);
+  const [supportUnread, setSupportUnread] = useState(0);
   const business = useSyncExternalStore(subscribeBusiness, getBusiness);
 
   // hydrate the session: profile, business, policy, onboarding + fleet
@@ -72,6 +65,30 @@ export default function DashboardLayout() {
     })();
     return () => {
       alive = false;
+    };
+  }, []);
+
+  // Poll unread counts every 60 s — notifications + support badge
+  useEffect(() => {
+    let alive = true;
+    async function poll() {
+      try {
+        const [notifData, supportData] = await Promise.allSettled([
+          fetchUnreadCount(),
+          fetchSupportUnread(),
+        ]);
+        if (!alive) return;
+        if (notifData.status === "fulfilled") setUnread(notifData.value.unread_count);
+        if (supportData.status === "fulfilled") setSupportUnread(supportData.value.unread_count);
+      } catch {
+        // silent
+      }
+    }
+    poll();
+    const id = setInterval(poll, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(id);
     };
   }, []);
 

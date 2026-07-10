@@ -1,14 +1,14 @@
-import { useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
 import BookingHeatmap from "./charts/BookingHeatmap";
 import RevenueDumbbell from "./charts/RevenueDumbbell";
 import UtilisationTrend from "./charts/UtilisationTrend";
 import OnboardingChecklist from "./OnboardingChecklist";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
-import { subscribe as subscribeFleet, getVehicles, expiringSoon } from "./fleetStore";
-import { subscribe as subscribeBookings, getBookings, rentalDays } from "./bookingsStore";
+import { fetchOverview, exportReport } from "../lib/api";
+import { toast } from "./toastStore";
 import "./overview.css";
 
-const fmtKES = (n) => `KES ${n.toLocaleString("en-KE")}`;
+const fmtKES = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
 
 const FLEET_STATUSES = ["Available", "On booking", "In maintenance"];
 
@@ -27,72 +27,74 @@ const STATUS_ICON = {
   ),
 };
 
+const EXPORT_TYPES = [
+  { value: "bookings", label: "Bookings" },
+  { value: "payments", label: "Payments" },
+  { value: "clients", label: "Clients" },
+];
+
 export default function Overview() {
-  const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
-  const bookings = useSyncExternalStore(subscribeBookings, getBookings);
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(null);
 
-  const hasVehicles = vehicles.length > 0;
-  const hasBookings = bookings.length > 0;
+  const load = useCallback(async () => {
+    try {
+      const result = await fetchOverview();
+      setData(result);
+    } catch (err) {
+      toast(err.message || "Failed to load overview", "danger");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const kpis = useMemo(() => {
-    const collected = bookings
-      .filter((b) => b.payment === "Paid")
-      .reduce((s, b) => s + rentalDays(b.pickup, b.dropoff) * b.rate, 0);
-    const active = bookings.filter((b) => b.status === "Active").length;
-    const onBooking = vehicles.filter((v) => v.status === "On booking").length;
-    const util = hasVehicles ? Math.round((onBooking / vehicles.length) * 100) : 0;
-    return [
-      {
-        label: "Collected this month",
-        value: fmtKES(collected),
-        delta: collected ? "via M-Pesa" : "no payments yet",
-        neutral: true,
-      },
-      {
-        label: "Active bookings",
-        value: String(active),
-        delta: active ? "on the road" : "no rentals yet",
-        neutral: true,
-      },
-      {
-        label: "Fleet utilisation",
-        value: `${util}%`,
-        delta: hasVehicles ? "of fleet on booking" : "add vehicles",
-        neutral: true,
-      },
-      {
-        label: "Verifications run",
-        value: "0",
-        delta: "none yet",
-        neutral: true,
-      },
-    ];
-  }, [bookings, vehicles, hasVehicles]);
+  useEffect(() => { load(); }, [load]);
 
-  const fleetRows = useMemo(
-    () =>
-      FLEET_STATUSES.map((label) => ({
-        label,
-        count: vehicles.filter((v) => v.status === label).length,
-      })),
-    [vehicles]
-  );
+  async function handleExport(type) {
+    if (exporting) return;
+    setExporting(type);
+    try {
+      await exportReport({ type });
+    } catch (err) {
+      toast(err.message || "Export failed", "danger");
+    } finally {
+      setExporting(null);
+    }
+  }
 
-  // expiring documents flag themselves; verification alerts come with the API
-  const attention = useMemo(() => {
-    const items = [];
-    vehicles.forEach((v) => {
-      const insDays = expiringSoon(v.ins);
-      if (insDays !== null) {
-        items.push({ kind: "warning", title: "Insurance expiring", meta: `${v.plate} · in ${insDays} days` });
-      }
-      const inspDays = expiringSoon(v.inspection);
-      if (inspDays !== null) {
-        items.push({ kind: "warning", title: "Inspection due", meta: `${v.plate} · in ${inspDays} days` });
-      }
-    });
-    return items;
-  }, [vehicles]);
+  const stats = data?.stats;
+  const hasFleet = (stats?.fleet_size ?? 0) > 0;
+  const hasBookings = (stats?.active_bookings ?? 0) > 0 || (data?.top_vehicles?.length ?? 0) > 0;
+
+  const kpis = stats
+    ? [
+        {
+          label: "Collected this month",
+          value: fmtKES(stats.monthly_revenue),
+          delta: stats.monthly_revenue ? "via Paystack" : "no payments yet",
+        },
+        {
+          label: "Active bookings",
+          value: String(stats.active_bookings),
+          delta: stats.active_bookings ? "on the road" : "no rentals yet",
+        },
+        {
+          label: "Fleet utilisation",
+          value: `${stats.utilisation}%`,
+          delta: hasFleet ? "of fleet on booking" : "add vehicles",
+        },
+        {
+          label: "Fleet size",
+          value: String(stats.fleet_size),
+          delta: hasFleet ? "vehicles in workspace" : "add your first vehicle",
+        },
+      ]
+    : [];
+
+  if (loading) {
+    return <div className="empty-block fleet-empty"><p>Loading overview…</p></div>;
+  }
 
   return (
     <>
@@ -104,16 +106,7 @@ export default function Overview() {
           <article className="stat-card" key={k.label}>
             <p className="stat-label">{k.label}</p>
             <p className="stat-value">{k.value}</p>
-            <p className="stat-note">
-              <span
-                className={
-                  "stat-delta" + (k.neutral ? "" : k.good ? " up" : " down")
-                }
-              >
-                {k.delta}
-              </span>{" "}
-              {k.vs}
-            </p>
+            <p className="stat-note"><span className="stat-delta">{k.delta}</span></p>
           </article>
         ))}
       </div>
@@ -123,10 +116,10 @@ export default function Overview() {
         <section className="chart-card">
           <header className="card-head">
             <h2>Booking rhythm</h2>
-            <p>Pickups by day and time, last 4 weeks</p>
+            <p>When bookings are created, by day and time — last 4 weeks</p>
           </header>
           {hasBookings ? (
-            <BookingHeatmap />
+            <BookingHeatmap data={data.booking_heatmap} />
           ) : (
             <EmptyState
               icon={EMPTY_ICONS.chart}
@@ -139,10 +132,10 @@ export default function Overview() {
         <section className="chart-card">
           <header className="card-head">
             <h2>Top earning vehicles</h2>
-            <p>KES '000 by vehicle, last month vs this month</p>
+            <p>KES by vehicle, last month vs this month</p>
           </header>
-          {hasBookings ? (
-            <RevenueDumbbell />
+          {(data?.top_vehicles?.length ?? 0) > 0 ? (
+            <RevenueDumbbell data={data.top_vehicles} />
           ) : (
             <EmptyState
               icon={EMPTY_ICONS.chart}
@@ -158,10 +151,10 @@ export default function Overview() {
         <section className="chart-card">
           <header className="card-head">
             <h2>Fleet utilisation</h2>
-            <p>% of vehicles out on booking, weekly, last 12 weeks</p>
+            <p>% of vehicles out on booking, weekly, last 10 weeks</p>
           </header>
-          {hasBookings ? (
-            <UtilisationTrend />
+          {(data?.utilisation_trend?.length ?? 0) >= 2 ? (
+            <UtilisationTrend data={data.utilisation_trend} />
           ) : (
             <EmptyState
               icon={EMPTY_ICONS.chart}
@@ -174,43 +167,14 @@ export default function Overview() {
         <div className="overview-side">
           <section className="panel-card">
             <header className="card-head">
-              <h2>Fleet status</h2>
-              <p>{hasVehicles ? `${vehicles.length} vehicles` : "No vehicles"}</p>
-            </header>
-            {hasVehicles ? (
-              <div className="fleet-rows">
-                {fleetRows.map((f) => (
-                  <div className="fleet-row" key={f.label}>
-                    <span className="fleet-label">{f.label}</span>
-                    <span className="fleet-bar">
-                      <i style={{ width: `${(f.count / vehicles.length) * 100}%` }} />
-                    </span>
-                    <span className="fleet-count">{f.count}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                compact
-                icon={EMPTY_ICONS.fleet}
-                title="No vehicles yet"
-                message="Add vehicles to see your fleet at a glance."
-              />
-            )}
-          </section>
-
-          <section className="panel-card">
-            <header className="card-head">
               <h2>Needs attention</h2>
               <p>Documents and checks</p>
             </header>
-            {attention.length > 0 ? (
+            {(data?.attention?.length ?? 0) > 0 ? (
               <ul className="attention-list">
-                {attention.map((a) => (
+                {data.attention.map((a) => (
                   <li key={a.title + a.meta}>
-                    <span className={`attention-icon ${a.kind}`}>
-                      {STATUS_ICON[a.kind]}
-                    </span>
+                    <span className={`attention-icon ${a.kind}`}>{STATUS_ICON[a.kind]}</span>
                     <div>
                       <p className="attention-title">{a.title}</p>
                       <p className="attention-meta">{a.meta}</p>
@@ -226,6 +190,28 @@ export default function Overview() {
                 message="Expiring documents and failed checks will flag here."
               />
             )}
+          </section>
+
+          <section className="panel-card">
+            <header className="card-head">
+              <h2>Export reports</h2>
+              <p>Download as CSV · always up to date</p>
+            </header>
+            <div className="export-list">
+              {EXPORT_TYPES.map(({ value, label }) => (
+                <div className="export-row" key={value}>
+                  <span>{label}</span>
+                  <button
+                    type="button"
+                    className="icon-btn prompt-green"
+                    disabled={exporting === value}
+                    onClick={() => handleExport(value)}
+                  >
+                    {exporting === value ? "Exporting…" : "Export CSV"}
+                  </button>
+                </div>
+              ))}
+            </div>
           </section>
         </div>
       </div>

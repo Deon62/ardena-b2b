@@ -1,26 +1,47 @@
-import { useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { subscribe, getClients, getClient } from "./clientsStore";
-import {
-  subscribe as subscribeBookings,
-  getBookings,
-  fmtDate,
-  fmtRange,
-  rentalDays,
-} from "./bookingsStore";
+import { fetchClient } from "../lib/api";
 import { STATUS_CHIP } from "./Bookings";
 import { VERIF_CHIP } from "./Clients";
+import { fmtDate, fmtRange, rentalDays } from "./bookingsStore";
+import { toast } from "./toastStore";
 import "./fleet.css";
 import "./bookings.css";
 
 const fmtAmount = (n) => n.toLocaleString("en-KE");
 
 export default function ClientDetails() {
-  useSyncExternalStore(subscribe, getClients); // re-render on store changes
-  const bookings = useSyncExternalStore(subscribeBookings, getBookings);
   const { id } = useParams();
+  const [c, setC] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const c = getClient(decodeURIComponent(id));
+  const load = useCallback(async () => {
+    try {
+      const data = await fetchClient(id);
+      setC(data);
+    } catch (err) {
+      toast(err.message || "Failed to load client", "danger");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading) {
+    return (
+      <>
+        <Link to="/dashboard/clients" className="back-link" aria-label="Back to clients">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </Link>
+        <div className="empty-block fleet-empty"><p>Loading…</p></div>
+      </>
+    );
+  }
 
   if (!c) {
     return (
@@ -37,10 +58,8 @@ export default function ClientDetails() {
     );
   }
 
-  const history = bookings.filter((b) => b.customer === c.name);
-  const spend = history
-    .filter((b) => b.status !== "Cancelled")
-    .reduce((sum, b) => sum + rentalDays(b.pickup, b.dropoff) * b.rate, 0);
+  const history = c.bookings || [];
+  const spend = c.total_spend || 0;
 
   return (
     <>
@@ -54,8 +73,8 @@ export default function ClientDetails() {
           <div className="head-titles">
             <h1>{c.name}</h1>
             <p>
-              {c.id} · {c.phone} ·{" "}
-              <span className={`chip ${VERIF_CHIP[c.verification]}`}>{c.verification}</span>
+              #{c.id} · {c.phone} ·{" "}
+              <span className={`chip ${VERIF_CHIP[c.verification] || "pending"}`}>{c.verification}</span>
             </p>
           </div>
         </div>
@@ -77,11 +96,11 @@ export default function ClientDetails() {
             </div>
             <div className="spec">
               <dt>Email</dt>
-              <dd>{c.email}</dd>
+              <dd>{c.email || "—"}</dd>
             </div>
             <div className="spec">
               <dt>ID document</dt>
-              <dd>{c.idType}</dd>
+              <dd>{c.id_type || "—"}</dd>
             </div>
             <div className="spec">
               <dt>Client since</dt>
@@ -112,12 +131,12 @@ export default function ClientDetails() {
             </header>
             <div className="pay-row">
               <span>Status</span>
-              <span className={`chip ${VERIF_CHIP[c.verification]}`}>{c.verification}</span>
+              <span className={`chip ${VERIF_CHIP[c.verification] || "pending"}`}>{c.verification}</span>
             </div>
             <p className="side-hint">
               {c.verification === "Verified"
                 ? "ID and driver's licence matched. Safe to hand over keys."
-                : c.verification === "Failed"
+                : c.verification === "Not found" || c.verification === "Failed" || c.verification === "Mismatch"
                   ? "Last check failed, ask the customer to resubmit their documents."
                   : "The customer hasn't completed the ID check yet."}
             </p>

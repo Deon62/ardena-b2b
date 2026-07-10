@@ -1,25 +1,21 @@
-import { useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  subscribe,
-  getBookings,
-  getBooking,
-  setStatus,
-  setPayment,
-  setDepositStatus,
-  recordCheckOut,
-  recordCheckIn,
-  NEXT_STEP,
-  CANCELLABLE,
-  fmtDate,
-  rentalDays,
-} from "./bookingsStore";
+  fetchBooking,
+  setBookingStatus,
+  recordHandoverOut,
+  recordHandoverIn,
+  bookingDepositAction,
+  sendPaymentLink,
+} from "../lib/api";
+import { useSyncExternalStore } from "react";
 import {
   subscribe as subscribePolicy,
   getPolicy,
   RETURN_HOUR,
 } from "./policyStore";
 import { STATUS_CHIP, PAY_CHIP } from "./Bookings";
+import { fmtDate, rentalDays } from "./bookingsStore";
 import { downloadAgreement } from "./pdf";
 import { toast } from "./toastStore";
 import DatePicker from "./DatePicker";
@@ -31,11 +27,18 @@ const fmtAmount = (n) => n.toLocaleString("en-KE");
 
 const FUEL_LEVELS = ["Full", "3/4", "1/2", "1/4", "Reserve"];
 
-// half-hour steps for the return time
 const TIMES = Array.from({ length: 48 }, (_, i) => {
   const h = String(Math.floor(i / 2)).padStart(2, "0");
   return `${h}:${i % 2 ? "30" : "00"}`;
 });
+
+const NEXT_STEP = {
+  Pending: { label: "Confirm booking", to: "Confirmed" },
+  Confirmed: { label: "Start rental", to: "Active" },
+  Active: { label: "Mark completed", to: "Completed" },
+};
+
+const CANCELLABLE = ["Pending", "Confirmed"];
 
 const STATUS_TOAST = {
   Confirmed: "Booking confirmed.",
@@ -43,25 +46,47 @@ const STATUS_TOAST = {
   Completed: "Booking marked completed.",
 };
 
-const nowLabel = () =>
-  new Date().toLocaleString("en-KE", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
 export default function BookingDetails() {
-  useSyncExternalStore(subscribe, getBookings); // re-render on store changes
   const policy = useSyncExternalStore(subscribePolicy, getPolicy);
   const { ref } = useParams();
+  const [b, setB] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [retDate, setRetDate] = useState(null);
   const [retTime, setRetTime] = useState("10:00");
   const [outFuel, setOutFuel] = useState("Full");
   const [inFuel, setInFuel] = useState("Full");
 
-  const b = getBooking(decodeURIComponent(ref));
+  const decodedRef = decodeURIComponent(ref);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await fetchBooking(decodedRef);
+      setB(data);
+    } catch (err) {
+      toast(err.message || "Failed to load booking", "danger");
+    } finally {
+      setLoading(false);
+    }
+  }, [decodedRef]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading) {
+    return (
+      <>
+        <Link to="/dashboard/bookings" className="back-link" aria-label="Back to bookings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </Link>
+        <div className="empty-block fleet-empty"><p>Loading…</p></div>
+      </>
+    );
+  }
 
   if (!b) {
     return (
@@ -83,45 +108,105 @@ export default function BookingDetails() {
   const next = NEXT_STEP[b.status];
   const canCancel = CANCELLABLE.includes(b.status);
   const canPrompt = b.payment !== "Paid" && b.payment !== "Refunded" && b.status !== "Cancelled" && b.status !== "Completed";
-  const ho = b.handover;
-  const penalty = ho.in ? ho.in.penalty : 0;
-  // per-booking deposit wins over the policy default
-  const depositAmt = b.depositAmount ?? policy.deposit;
+  const ho = b.handover || { out: null, inn: null };
+  const hoOut = ho.out || null;
+  const hoIn = ho.inn || null;
+  const penalty = hoIn ? hoIn.penalty : 0;
+  const depositAmt = b.deposit_amount ?? policy.deposit;
 
-  function handleCheckOut(e) {
-    e.preventDefault();
-    const f = new FormData(e.currentTarget);
-    recordCheckOut(b.ref, {
-      odometer: Number(f.get("odometer")),
-      fuel: f.get("fuel"),
-      at: nowLabel(),
-      notes: f.get("notes").trim(),
-    });
-    toast("Check-out recorded, keys can go out.");
+  async function doStatus(newStatus) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const updated = await setBookingStatus(b.ref, newStatus);
+      setB(updated);
+      toast(STATUS_TOAST[newStatus] || "Booking updated.");
+    } catch (err) {
+      toast(err.message || "Failed to update status", "danger");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function handleCheckIn(e) {
+  async function handleCheckOut(e) {
     e.preventDefault();
+    if (busy) return;
+    setBusy(true);
     const f = new FormData(e.currentTarget);
-    const returned = new Date(`${retDate || b.dropoff}T${retTime}:00`);
-    const due = new Date(`${b.dropoff}T${String(RETURN_HOUR).padStart(2, "0")}:00:00`);
-    const lateHours = Math.max(0, Math.ceil((returned - due) / 3600000));
-    const pen = lateHours * policy.lateFeePerHour;
-    recordCheckIn(b.ref, {
-      odometer: Number(f.get("odometer")),
-      fuel: f.get("fuel"),
-      at: returned.toLocaleString("en-KE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }),
-      lateHours,
-      penalty: pen,
-      notes: f.get("notes").trim(),
-    });
-    if (lateHours > 0) {
-      toast(
-        `Check-in recorded, ${lateHours} hr${lateHours > 1 ? "s" : ""} late. KES ${pen.toLocaleString("en-KE")} penalty applied.`,
-        "danger"
-      );
-    } else {
-      toast("Check-in recorded, returned on time.");
+    try {
+      const updated = await recordHandoverOut(b.ref, {
+        odometer: Number(f.get("odometer")),
+        fuel: outFuel,
+        notes: f.get("notes").trim() || null,
+      });
+      setB(updated);
+      toast("Check-out recorded, keys can go out.");
+    } catch (err) {
+      toast(err.message || "Failed to record check-out", "danger");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleCheckIn(e) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    const f = new FormData(e.currentTarget);
+    try {
+      const updated = await recordHandoverIn(b.ref, {
+        odometer: Number(f.get("odometer")),
+        fuel: inFuel,
+        notes: f.get("notes").trim() || null,
+        return_date: retDate || b.dropoff,
+        return_time: retTime,
+      });
+      setB(updated);
+      const late = updated.handover?.inn?.late_hours || 0;
+      const pen = updated.handover?.inn?.penalty || 0;
+      if (late > 0) {
+        toast(`Check-in recorded, ${late} hr${late > 1 ? "s" : ""} late. KES ${pen.toLocaleString("en-KE")} penalty applied.`, "danger");
+      } else {
+        toast("Check-in recorded, returned on time.");
+      }
+    } catch (err) {
+      toast(err.message || "Failed to record check-in", "danger");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeposit(action) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const updated = await bookingDepositAction(b.ref, action);
+      setB(updated);
+      toast(action === "refund" ? "Security deposit refunded." : "Security deposit forfeited.", action === "forfeit" ? "danger" : undefined);
+    } catch (err) {
+      toast(err.message || "Failed", "danger");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePaymentLink() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = await sendPaymentLink(b.ref);
+      const updated = await fetchBooking(b.ref);
+      setB(updated);
+      if (result.checkout_url) {
+        window.open(result.checkout_url, "_blank", "noopener,noreferrer");
+        toast("Payment link opened — share it with the customer or let them pay directly.");
+      } else {
+        toast(result.message || "Payment link created.", result.success ? undefined : "danger");
+      }
+    } catch (err) {
+      toast(err.message || "Failed to create payment link", "danger");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -147,10 +232,8 @@ export default function BookingDetails() {
             <button
               type="button"
               className="btn btn-primary"
-              onClick={() => {
-                setStatus(b.ref, next.to);
-                toast(STATUS_TOAST[next.to] || "Booking updated.");
-              }}
+              disabled={busy}
+              onClick={() => doStatus(next.to)}
             >
               {next.label}
             </button>
@@ -162,10 +245,10 @@ export default function BookingDetails() {
                 <button
                   type="button"
                   className="icon-btn danger"
+                  disabled={busy}
                   onClick={() => {
-                    setStatus(b.ref, "Cancelled");
+                    doStatus("Cancelled");
                     setCancelling(false);
-                    toast("Booking cancelled.", "danger");
                   }}
                 >
                   Yes
@@ -247,14 +330,14 @@ export default function BookingDetails() {
             </dl>
           </section>
 
-          {/* ---- Handover: check-out at pickup, check-in at return ---- */}
+          {/* ---- Handover ---- */}
           <section className="panel-card">
             <header className="card-head">
               <h2>Handover</h2>
               <p>Condition recorded at pickup and return</p>
             </header>
 
-            {!ho.out && b.status !== "Cancelled" && (
+            {!hoOut && b.status !== "Cancelled" && (
               <form className="ho-form" onSubmit={handleCheckOut}>
                 <p className="ho-step">Check-out · record before handing over keys</p>
                 <div className="form-grid">
@@ -278,26 +361,26 @@ export default function BookingDetails() {
                   </div>
                 </div>
                 <div className="form-actions">
-                  <button type="submit" className="btn btn-primary">
+                  <button type="submit" className="btn btn-primary" disabled={busy}>
                     Record check-out
                   </button>
                 </div>
               </form>
             )}
 
-            {ho.out && (
+            {hoOut && (
               <>
                 <div className="pay-row">
-                  <span>Checked out · {ho.out.at}</span>
+                  <span>Checked out · {hoOut.at}</span>
                   <span className="mini-amount">
-                    {fmtAmount(ho.out.odometer)} km · fuel {ho.out.fuel}
+                    {fmtAmount(hoOut.odometer)} km · fuel {hoOut.fuel}
                   </span>
                 </div>
-                {ho.out.notes && <p className="ho-note">Out: {ho.out.notes}</p>}
+                {hoOut.notes && <p className="ho-note">Out: {hoOut.notes}</p>}
               </>
             )}
 
-            {ho.out && !ho.in && b.status === "Active" && (
+            {hoOut && !hoIn && b.status === "Active" && (
               <form className="ho-form ho-return" onSubmit={handleCheckIn}>
                 <p className="ho-step">
                   Check-in · due {fmtDate(b.dropoff)} by {RETURN_HOUR}:00 AM, then KES{" "}
@@ -306,7 +389,7 @@ export default function BookingDetails() {
                 <div className="form-grid">
                   <div className="field">
                     <label htmlFor="hi-odo">Odometer (km)</label>
-                    <input id="hi-odo" name="odometer" type="number" min={ho.out.odometer} placeholder={String(ho.out.odometer)} required />
+                    <input id="hi-odo" name="odometer" type="number" min={hoOut.odometer} placeholder={String(hoOut.odometer)} required />
                   </div>
                   <div className="field">
                     <label htmlFor="hi-fuel">Fuel level</label>
@@ -342,38 +425,38 @@ export default function BookingDetails() {
                   </div>
                 </div>
                 <div className="form-actions">
-                  <button type="submit" className="btn btn-primary">
+                  <button type="submit" className="btn btn-primary" disabled={busy}>
                     Record check-in
                   </button>
                 </div>
               </form>
             )}
 
-            {ho.in && (
+            {hoIn && (
               <>
                 <div className="pay-row">
-                  <span>Checked in · {ho.in.at}</span>
+                  <span>Checked in · {hoIn.at}</span>
                   <span className="mini-amount">
-                    {fmtAmount(ho.in.odometer)} km · fuel {ho.in.fuel}
+                    {fmtAmount(hoIn.odometer)} km · fuel {hoIn.fuel}
                   </span>
                 </div>
                 <div className="pay-row">
                   <span>Distance driven</span>
-                  <span className="mini-amount">{fmtAmount(ho.in.odometer - ho.out.odometer)} km</span>
+                  <span className="mini-amount">{fmtAmount(hoIn.odometer - hoOut.odometer)} km</span>
                 </div>
                 <div className="pay-row">
                   <span>Late return</span>
-                  <span className={`mini-amount${ho.in.lateHours > 0 ? " penalty-red" : ""}`}>
-                    {ho.in.lateHours > 0
-                      ? `${ho.in.lateHours} hr${ho.in.lateHours > 1 ? "s" : ""} · KES ${fmtAmount(ho.in.penalty)}`
+                  <span className={`mini-amount${hoIn.late_hours > 0 ? " penalty-red" : ""}`}>
+                    {hoIn.late_hours > 0
+                      ? `${hoIn.late_hours} hr${hoIn.late_hours > 1 ? "s" : ""} · KES ${fmtAmount(hoIn.penalty)}`
                       : "On time"}
                   </span>
                 </div>
-                {ho.in.notes && <p className="ho-note">In: {ho.in.notes}</p>}
+                {hoIn.notes && <p className="ho-note">In: {hoIn.notes}</p>}
               </>
             )}
 
-            {!ho.out && b.status === "Cancelled" && (
+            {!hoOut && b.status === "Cancelled" && (
               <p className="side-hint">Booking was cancelled before handover.</p>
             )}
           </section>
@@ -393,36 +476,32 @@ export default function BookingDetails() {
             <div className="pay-row">
               <span>Security deposit</span>
               <span className="mini-amount">
-                KES {fmtAmount(depositAmt)} · {b.depositStatus}
+                KES {fmtAmount(depositAmt)} · {b.deposit_status}
               </span>
             </div>
             {penalty > 0 && (
               <div className="pay-row">
                 <span>Late return penalty</span>
                 <span className="mini-amount penalty-red">
-                  KES {fmtAmount(penalty)} · {ho.in.lateHours} hr{ho.in.lateHours > 1 ? "s" : ""}
+                  KES {fmtAmount(penalty)} · {hoIn.late_hours} hr{hoIn.late_hours > 1 ? "s" : ""}
                 </span>
               </div>
             )}
-            {b.depositStatus === "Held" && ho.in && (
+            {b.deposit_status === "Held" && hoIn && (
               <div className="deposit-actions">
                 <button
                   type="button"
                   className="icon-btn"
-                  onClick={() => {
-                    setDepositStatus(b.ref, "Refunded");
-                    toast("Security deposit refunded.");
-                  }}
+                  disabled={busy}
+                  onClick={() => handleDeposit("refund")}
                 >
                   Refund deposit
                 </button>
                 <button
                   type="button"
                   className="icon-btn danger"
-                  onClick={() => {
-                    setDepositStatus(b.ref, "Forfeited");
-                    toast("Security deposit forfeited.", "danger");
-                  }}
+                  disabled={busy}
+                  onClick={() => handleDeposit("forfeit")}
                 >
                   Forfeit
                 </button>
@@ -433,15 +512,13 @@ export default function BookingDetails() {
                 <button
                   type="button"
                   className="btn mpesa-btn"
-                  onClick={() => {
-                    setPayment(b.ref, "Prompt sent");
-                    toast(`M-Pesa prompt sent to ${b.phone}.`);
-                  }}
+                  disabled={busy}
+                  onClick={handlePaymentLink}
                 >
-                  {b.payment === "Prompt sent" ? "Resend prompt" : "Send prompt"}
+                  {b.payment === "Prompt sent" ? "Resend payment link" : "Send payment link"}
                 </button>
                 <p className="side-hint">
-                  Sends an STK push to {b.phone}. Live payments arrive with the M-Pesa integration.
+                  Opens a Paystack checkout page for KES {fmtAmount(total)}. Share the link with {b.customer} to collect payment online.
                 </p>
               </>
             )}
@@ -455,7 +532,10 @@ export default function BookingDetails() {
             <button
               type="button"
               className="btn btn-primary pay-btn"
-              onClick={() => downloadAgreement(b, { ...policy, deposit: depositAmt })}
+              onClick={() => downloadAgreement(
+                { ...b, depositStatus: b.deposit_status, depositAmount: depositAmt },
+                { ...policy, deposit: depositAmt }
+              )}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 3v12m0 0l-4-4m4 4l4-4" />

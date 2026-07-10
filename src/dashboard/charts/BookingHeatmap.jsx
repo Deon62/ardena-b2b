@@ -4,18 +4,8 @@ import { useState } from "react";
    brand blue; near-zero cells recede into the surface by design. */
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const SLOTS = ["6a", "8a", "10a", "12p", "2p", "4p", "6p", "8p"];
-
-// bookings per 2-hour slot over the last 4 weeks (mock)
-const VALUES = [
-  [1, 2, 3, 2, 2, 3, 2, 1],
-  [0, 2, 2, 3, 2, 2, 3, 1],
-  [1, 1, 3, 3, 2, 3, 2, 2],
-  [1, 2, 4, 3, 3, 4, 5, 2],
-  [2, 4, 6, 7, 5, 6, 8, 4],
-  [3, 6, 9, 8, 7, 5, 4, 3],
-  [2, 3, 5, 4, 3, 2, 1, 0],
-];
+const SLOTS = [6, 8, 10, 12, 14, 16, 18, 20];
+const SLOT_LABELS = ["6a", "8a", "10a", "12p", "2p", "4p", "6p", "8p"];
 
 const RAMP = ["#e4edf9", "#c2dbfa", "#8fbdf7", "#539df4", "#1a80ec", "#0060c4"];
 
@@ -28,16 +18,28 @@ function binColor(v) {
   return RAMP[5];
 }
 
-export default function BookingHeatmap() {
-  const [tip, setTip] = useState(null);
+// Build 7×8 grid from API data: [{ day, hour, count }]
+function buildGrid(data) {
+  const grid = Object.fromEntries(DAYS.map((d) => [d, Object.fromEntries(SLOTS.map((s) => [s, 0]))]));
+  for (const cell of data) {
+    if (grid[cell.day] !== undefined && grid[cell.day][cell.hour] !== undefined) {
+      grid[cell.day][cell.hour] = cell.count;
+    }
+  }
+  return grid;
+}
 
-  function show(e, day, slot, v) {
+export default function BookingHeatmap({ data }) {
+  const [tip, setTip] = useState(null);
+  const grid = buildGrid(data || []);
+
+  function show(e, day, slotLabel, v) {
     const card = e.currentTarget.closest(".chart-card").getBoundingClientRect();
     const cell = e.currentTarget.getBoundingClientRect();
     setTip({
       x: cell.left - card.left + cell.width / 2,
       y: cell.top - card.top,
-      text: `${day} ${slot}`,
+      text: `${day} ${slotLabel}`,
       value: `${v} booking${v === 1 ? "" : "s"}`,
     });
   }
@@ -46,36 +48,35 @@ export default function BookingHeatmap() {
     <div className="heatmap">
       <div className="heatmap-grid">
         <span />
-        {SLOTS.map((s) => (
-          <span className="heatmap-axis" key={s}>
-            {s}
-          </span>
+        {SLOT_LABELS.map((s) => (
+          <span className="heatmap-axis" key={s}>{s}</span>
         ))}
-        {DAYS.map((day, r) => (
+        {DAYS.map((day) => (
           <div className="heatmap-row" key={day}>
             <span className="heatmap-axis heatmap-day">{day}</span>
-            {VALUES[r].map((v, c) => (
-              <span
-                key={c}
-                className="heatmap-cell"
-                style={{ background: binColor(v) }}
-                tabIndex={0}
-                aria-label={`${day} ${SLOTS[c]}: ${v} bookings`}
-                onMouseEnter={(e) => show(e, day, SLOTS[c], v)}
-                onFocus={(e) => show(e, day, SLOTS[c], v)}
-                onMouseLeave={() => setTip(null)}
-                onBlur={() => setTip(null)}
-              />
-            ))}
+            {SLOTS.map((slot, c) => {
+              const v = grid[day][slot];
+              return (
+                <span
+                  key={slot}
+                  className="heatmap-cell"
+                  style={{ background: binColor(v) }}
+                  tabIndex={0}
+                  aria-label={`${day} ${SLOT_LABELS[c]}: ${v} bookings`}
+                  onMouseEnter={(e) => show(e, day, SLOT_LABELS[c], v)}
+                  onFocus={(e) => show(e, day, SLOT_LABELS[c], v)}
+                  onMouseLeave={() => setTip(null)}
+                  onBlur={() => setTip(null)}
+                />
+              );
+            })}
           </div>
         ))}
       </div>
 
       <div className="heatmap-scale" aria-hidden="true">
         <span>Fewer</span>
-        {RAMP.map((c) => (
-          <i key={c} style={{ background: c }} />
-        ))}
+        {RAMP.map((c) => <i key={c} style={{ background: c }} />)}
         <span>More</span>
       </div>
 

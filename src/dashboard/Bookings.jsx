@@ -1,14 +1,11 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  subscribe,
-  getBookings,
-  fmtRange,
-  rentalDays,
-} from "./bookingsStore";
+import { fetchBookings } from "../lib/api";
+import { fmtRange, rentalDays } from "./bookingsStore";
 import BookingsTrend from "./charts/BookingsTrend";
 import BookingCalendar from "./BookingCalendar";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
+import { toast } from "./toastStore";
 import "./fleet.css";
 import "./bookings.css";
 
@@ -38,25 +35,41 @@ export const PAY_CHIP = {
 const fmtAmount = (n) => n.toLocaleString("en-KE");
 
 export default function Bookings() {
-  const bookings = useSyncExternalStore(subscribe, getBookings);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
 
+  const load = useCallback(async () => {
+    try {
+      const params = {};
+      if (status !== "All") params.status = status;
+      const data = await fetchBookings(params);
+      setBookings(data.data || []);
+    } catch (err) {
+      toast(err.message || "Failed to load bookings", "danger");
+    } finally {
+      setLoading(false);
+    }
+  }, [status]);
+
+  useEffect(() => {
+    setLoading(true);
+    load();
+  }, [load]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return bookings.filter((b) => {
-      if (status !== "All" && b.status !== status) return false;
-      if (!q) return true;
-      return (
+    if (!q) return bookings;
+    return bookings.filter(
+      (b) =>
         b.customer.toLowerCase().includes(q) ||
         b.ref.toLowerCase().includes(q) ||
         b.vehicle.toLowerCase().includes(q) ||
         b.plate.toLowerCase().includes(q)
-      );
-    });
-  }, [bookings, query, status]);
+    );
+  }, [bookings, query]);
 
-  // stable display number per booking (1, 2, 3…) by list order
   const bookingNo = useMemo(() => {
     const m = new Map();
     bookings.forEach((b, i) => m.set(b.ref, i + 1));
@@ -76,6 +89,10 @@ export default function Bookings() {
       todayReturns,
     };
   }, [bookings]);
+
+  if (loading) {
+    return <div className="empty-block fleet-empty"><p>Loading bookings…</p></div>;
+  }
 
   return (
     <>

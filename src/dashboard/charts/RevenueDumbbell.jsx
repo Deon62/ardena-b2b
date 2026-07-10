@@ -3,29 +3,26 @@ import { useState } from "react";
 /* Top earning vehicles, last month → this month, dumbbell chart:
    one hue, two shades (light = last month, solid = this month). KES '000. */
 
-const DATA = [
-  { name: "Toyota Prado", prev: 142, curr: 196 },
-  { name: "Mazda CX-5", prev: 94, curr: 85 },
-  { name: "Nissan NV350", prev: 70, curr: 64 },
-  { name: "Toyota Hilux", prev: 48, curr: 44 },
-  { name: "Toyota Axio", prev: 26, curr: 31 },
-];
-
 const W = 460;
 const H = 250;
 const TOP = 38;
 const BOTTOM = 30;
 const LEFT = 118;
 const RIGHT = 84;
-const MAX = 210;
 const TICKS = [0, 50, 100, 150, 200];
 
-const x = (v) => LEFT + (v / MAX) * (W - LEFT - RIGHT);
-const rowY = (i) => TOP + ((i + 0.5) * (H - TOP - BOTTOM)) / DATA.length;
-const fmt = (v) => `${v}K`;
+const fmt = (v) => `${Math.round(v / 1000)}K`;
 
-export default function RevenueDumbbell() {
+export default function RevenueDumbbell({ data = [] }) {
   const [tip, setTip] = useState(null);
+
+  // Scale max to the data
+  const maxVal = Math.max(...data.flatMap((d) => [d.prev, d.curr]), 1);
+  const MAX = Math.ceil(maxVal / 50000) * 50000 || 200000;
+  const dynTicks = [0, MAX * 0.25, MAX * 0.5, MAX * 0.75, MAX].map(Math.round);
+
+  const x = (v) => LEFT + (v / MAX) * (W - LEFT - RIGHT);
+  const rowY = (i) => TOP + ((i + 0.5) * (H - TOP - BOTTOM)) / Math.max(data.length, 1);
 
   function show(e, d) {
     const card = e.currentTarget.closest(".chart-card").getBoundingClientRect();
@@ -44,7 +41,6 @@ export default function RevenueDumbbell() {
         role="img"
         aria-label="Top earning vehicles, last month versus this month, in thousands of shillings"
       >
-        {/* legend */}
         <g className="db-legend">
           <circle cx={W - 168} cy={16} r="4.5" className="db-dot prev" />
           <text x={W - 158} y={20}>Last month</text>
@@ -52,56 +48,36 @@ export default function RevenueDumbbell() {
           <text x={W - 68} y={20}>This month</text>
         </g>
 
-        {/* recessive grid + ticks */}
-        {TICKS.map((t) => (
+        {dynTicks.map((t) => (
           <g key={t}>
-            <line
-              className="db-grid"
-              x1={x(t)}
-              y1={TOP}
-              x2={x(t)}
-              y2={H - BOTTOM}
-            />
+            <line className="db-grid" x1={x(t)} y1={TOP} x2={x(t)} y2={H - BOTTOM} />
             <text className="db-tick" x={x(t)} y={H - 10} textAnchor="middle">
-              {t === 0 ? "0" : `${t}K`}
+              {t === 0 ? "0" : fmt(t)}
             </text>
           </g>
         ))}
 
-        {DATA.map((d, i) => {
+        {data.map((d, i) => {
           const y = rowY(i);
-          const pct = Math.round(((d.curr - d.prev) / d.prev) * 100);
+          const pct = d.prev > 0 ? Math.round(((d.curr - d.prev) / d.prev) * 100) : 0;
           const up = pct >= 0;
           return (
-            <g key={d.name}>
+            <g key={d.plate || d.name}>
               <text className="db-label" x={LEFT - 14} y={y + 4} textAnchor="end">
                 {d.name}
               </text>
-
-              <line
-                className="db-track"
-                x1={x(d.prev)}
-                y1={y}
-                x2={x(d.curr)}
-                y2={y}
-              />
+              <line className="db-track" x1={x(d.prev)} y1={y} x2={x(d.curr)} y2={y} />
               <circle className="db-dot prev" cx={x(d.prev)} cy={y} r="5" />
               <circle className="db-dot curr" cx={x(d.curr)} cy={y} r="5.5" />
-
               <text className="db-value" x={W - RIGHT + 16} y={y + 4}>
                 {fmt(d.curr)}
                 <tspan className={up ? "db-delta up" : "db-delta down"}>
-                  {"  "}
-                  {up ? "▲" : "▼"}{Math.abs(pct)}%
+                  {"  "}{up ? "▲" : "▼"}{Math.abs(pct)}%
                 </tspan>
               </text>
-
-              {/* row-wide invisible hit target */}
               <rect
-                x={LEFT}
-                y={y - 14}
-                width={W - LEFT - RIGHT}
-                height="28"
+                x={LEFT} y={y - 14}
+                width={W - LEFT - RIGHT} height="28"
                 fill="transparent"
                 onMouseMove={(e) => show(e, d)}
                 onMouseLeave={() => setTip(null)}
