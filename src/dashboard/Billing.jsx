@@ -1,76 +1,133 @@
-import { useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { subscribe as subscribeFleet, getVehicles } from "./fleetStore";
-import {
-  subscribe as subscribeVerif,
-  getState as getVerifState,
-  hydrateWallet,
-  CHECK_PRICE,
-} from "./verificationsStore";
+import { fetchSubscription, fetchInvoices, payInvoice, fetchBillingUsage } from "../lib/api";
 import BillingTimeline from "./charts/BillingTimeline";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
+import { toast } from "./toastStore";
 import "./overview.css";
 import "./fleet.css";
 import "./billing.css";
 
-// Live Paystack payment link (card or M-Pesa checkout)
-const PAYSTACK_LINK = "https://paystack.shop/pay/f31jnsoutz";
+const fmtAmount = (n) => Number(n).toLocaleString("en-KE");
 
-const PLAN = { launchRate: 200 };
+const STATUS_CHIP = {
+  trial: "pending",
+  active: "active",
+  past_due: "cancelled",
+};
 
-// Invoices, newest first — populated by the billing API when it ships
-// (docs/backend-api.md §10).
-const INVOICES = [];
-
-const fmtAmount = (n) => n.toLocaleString("en-KE");
+function fmtDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString("en-KE", { dateStyle: "medium" });
+}
 
 export default function Billing() {
-  const vehicles = useSyncExternalStore(subscribeFleet, getVehicles);
-  const { wallet: verifWallet } = useSyncExternalStore(subscribeVerif, getVerifState);
+  const [sub, setSub] = useState(null);
+  const [invoices, setInvoices] = useState([]);
+  const [usage, setUsage] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [payingRef, setPayingRef] = useState(null);
 
-  useEffect(() => {
-    hydrateWallet().catch(() => {});
+  const load = useCallback(async () => {
+    try {
+      const [subData, invData, usageData] = await Promise.all([
+        fetchSubscription(),
+        fetchInvoices(),
+        fetchBillingUsage(),
+      ]);
+      setSub(subData);
+      setInvoices(invData.data || []);
+      setUsage(usageData);
+    } catch (err) {
+      toast(err.message || "Failed to load billing", "danger");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const wallet = verifWallet.balance;
-  const checkPrice = verifWallet.checkPrice || CHECK_PRICE;
-  const checksUsed = 0;
-  const monthly = vehicles.length * PLAN.launchRate;
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  // the two bars that make up this month's spend
-  const billed = [
-    { label: "Vehicles on plan", detail: `${vehicles.length} × KES ${PLAN.launchRate}`, amount: monthly, color: "var(--brand)" },
-    { label: "Renter checks", detail: `${checksUsed} × KES ${checkPrice} · from wallet`, amount: checksUsed * checkPrice, color: "#d97706" },
-  ];
-  const totalSpend = billed.reduce((s, b) => s + b.amount, 0);
-
-  if (vehicles.length === 0) {
-    return (
-      <section className="panel-card">
-        <EmptyState
-          icon={EMPTY_ICONS.payments}
-          title="No bill yet"
-          message="Add vehicles to your fleet and your first monthly bill is generated once your trial ends."
-          action={
-            <Link to="/dashboard/fleet/new" className="btn btn-primary">
-              Add a vehicle
-            </Link>
-          }
-        />
-      </section>
-    );
+  async function handlePayInvoice(inv) {
+    if (payingRef) return;
+    setPayingRef(inv.ref);
+    try {
+      // Use existing checkout_url if available, otherwise initiate via API
+      let checkout = inv.checkout_url;
+      if (!checkout) {
+        const result = await payInvoice(inv.ref);
+        checkout = result.checkout_url;
+        // Refresh to get updated checkout_url stored on invoice
+        const updated = await fetchInvoices();
+        setInvoices(updated.data || []);
+      }
+      window.open(checkout, "_blank", "noopener,noreferrer");
+      toast("Paystack checkout opened — complete your payment there.");
+    } catch (err) {
+      toast(err.message || "Failed to initiate payment", "danger");
+    } finally {
+      setPayingRef(null);
+    }
   }
+
+  if (loading) {
+    return <div className="empty-block fleet-empty"><p>Loading billing…</p></div>;
+  }
+
+  const totalSpend = usage ? usage.total : 0;
+  const paidInvoices = invoices.filter((i) => i.status === "Paid");
 
   return (
     <>
-      {/* ---- Two graphs on top: paid-over-time + this month's breakdown ---- */}
+      {/* ---- Subscription summary strip ---- */}
+      {sub && (
+        <div className="stat-grid fleet-stats" style={{ marginBottom: "1.5rem" }}>
+          <article className="stat-card">
+            <p className="stat-label">Plan</p>
+            <p className="stat-value">{sub.plan}</p>
+            <p className="stat-note">
+              <span className={`chip ${STATUS_CHIP[sub.status] || "pending"}`} style={{ fontSize: "11px" }}>
+                {sub.status === "trial" ? "Free trial" : sub.status === "past_due" ? "Past due" : "Active"}
+              </span>
+            </p>
+          </article>
+          <article className="stat-card">
+            <p className="stat-label">Vehicles on plan</p>
+            <p className="stat-value">{sub.vehicle_count}</p>
+            <p className="stat-note">KES {fmtAmount(sub.rate)} / vehicle / month</p>
+          </article>
+          <article className="stat-card">
+            <p className="stat-label">Monthly total</p>
+            <p className="stat-value">KES {fmtAmount(sub.monthly_total)}</p>
+            <p className="stat-note">KES 2,000 minimum applies</p>
+          </article>
+          <article className="stat-card">
+            <p className="stat-label">
+              {sub.status === "trial" ? "Trial ends" : "Launch rate until"}
+            </p>
+            <p className="stat-value" style={{ fontSize: "1.25rem" }}>
+              {fmtDate(sub.status === "trial" ? sub.trial_ends : sub.launch_rate_until)}
+            </p>
+            <p className="stat-note">
+              {sub.status === "trial"
+                ? "No charge until trial ends"
+                : `KES ${fmtAmount(400)} / vehicle after this`}
+            </p>
+          </article>
+        </div>
+      )}
+
+      {/* ---- Charts ---- */}
       <div className="chart-row">
         <section className="chart-card">
           <header className="card-head">
             <h2>What you've paid</h2>
             <p>Your monthly bill over time</p>
           </header>
-          {INVOICES.length > 0 ? (
+          {paidInvoices.length > 0 ? (
             <BillingTimeline />
           ) : (
             <EmptyState
@@ -84,44 +141,53 @@ export default function Billing() {
         <section className="chart-card">
           <header className="card-head">
             <h2>This month</h2>
-            <p>KES {fmtAmount(totalSpend)} · what July is made of</p>
+            <p>
+              {usage
+                ? `KES ${fmtAmount(totalSpend)} · what this month is made of`
+                : "Loading usage…"}
+            </p>
           </header>
 
-          <div className="usage-list">
-            {billed.map((b) => (
-              <div className="usage-row" key={b.label}>
-                <div className="usage-head">
-                  <span className="usage-label">{b.label}</span>
-                  <span className="usage-amount">KES {fmtAmount(b.amount)}</span>
-                </div>
-                <span className="usage-bar">
-                  <i
-                    style={{
-                      width: totalSpend ? `${(b.amount / totalSpend) * 100}%` : "0%",
-                      background: b.color,
-                    }}
-                  />
-                </span>
-                <span className="usage-detail">{b.detail}</span>
+          {usage && (
+            <>
+              <div className="usage-list">
+                {usage.items.map((item) => (
+                  <div className="usage-row" key={item.label}>
+                    <div className="usage-head">
+                      <span className="usage-label">{item.label}</span>
+                      <span className="usage-amount">KES {fmtAmount(item.amount)}</span>
+                    </div>
+                    <span className="usage-bar">
+                      <i
+                        style={{
+                          width: totalSpend ? `${(item.amount / totalSpend) * 100}%` : "0%",
+                          background: item.color,
+                        }}
+                      />
+                    </span>
+                    <span className="usage-detail">{item.detail}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          <div className="wallet-strip">
-            <div>
-              <p className="wallet-label">Check wallet</p>
-              <p className="wallet-sub">
-                KES {fmtAmount(wallet)} · ≈ {Math.floor(wallet / checkPrice)} checks left
-              </p>
-            </div>
-            <a className="btn wallet-btn" href={PAYSTACK_LINK} target="_blank" rel="noreferrer">
-              Top up
-            </a>
-          </div>
+              <div className="wallet-strip">
+                <div>
+                  <p className="wallet-label">Check wallet</p>
+                  <p className="wallet-sub">
+                    KES {fmtAmount(usage.wallet_balance)} · ≈{" "}
+                    {Math.floor(usage.wallet_balance / usage.check_price)} checks left
+                  </p>
+                </div>
+                <Link className="btn wallet-btn" to="/dashboard/verification">
+                  Top up
+                </Link>
+              </div>
+            </>
+          )}
         </section>
       </div>
 
-      {/* ---- Invoices as a plain horizontal list, pay button on the right ---- */}
+      {/* ---- Invoices ---- */}
       <section className="panel-card">
         <header className="card-head">
           <h2>Invoices</h2>
@@ -129,37 +195,41 @@ export default function Billing() {
         </header>
 
         <div className="invoice-list">
-          {INVOICES.length === 0 && (
+          {invoices.length === 0 ? (
             <p className="invoice-empty">
               No invoices yet — your first one is generated when your trial ends.
             </p>
-          )}
-          {INVOICES.map((inv) => {
-            const due = inv.status === "Due";
-            return (
-              <div className={`invoice-row ${due ? "is-due" : ""}`} key={inv.ref}>
-                <div className="invoice-main">
-                  <p className="invoice-title">{inv.title}</p>
-                  <p className="invoice-detail">{inv.detail} · {inv.when}</p>
+          ) : (
+            invoices.map((inv) => {
+              const due = inv.status === "Due";
+              return (
+                <div className={`invoice-row ${due ? "is-due" : ""}`} key={inv.ref}>
+                  <div className="invoice-main">
+                    <p className="invoice-title">{inv.title}</p>
+                    <p className="invoice-detail">
+                      {inv.detail} · Due {fmtDate(inv.due_date)}
+                      {inv.paid_at ? ` · Paid ${fmtDate(inv.paid_at)}` : ""}
+                    </p>
+                  </div>
+                  <p className="invoice-amount">KES {fmtAmount(inv.amount)}</p>
+                  {due ? (
+                    <button
+                      type="button"
+                      className="btn btn-primary invoice-pay"
+                      disabled={payingRef === inv.ref}
+                      onClick={() => handlePayInvoice(inv)}
+                    >
+                      {payingRef === inv.ref ? "Opening…" : "Pay now"}
+                    </button>
+                  ) : (
+                    <span className="invoice-status">
+                      <span className="chip active">Paid</span>
+                    </span>
+                  )}
                 </div>
-                <p className="invoice-amount">KES {fmtAmount(inv.amount)}</p>
-                {due ? (
-                  <a
-                    className="btn btn-primary invoice-pay"
-                    href={PAYSTACK_LINK}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Pay now
-                  </a>
-                ) : (
-                  <span className="invoice-status">
-                    <span className="chip active">Paid</span>
-                  </span>
-                )}
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </section>
     </>
