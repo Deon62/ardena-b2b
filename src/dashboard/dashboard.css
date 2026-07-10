@@ -223,6 +223,12 @@
   box-shadow: var(--neo-in);
 }
 
+/* ---- Mobile top bar (hidden on desktop) ---- */
+
+.dash-topbar {
+  display: none;
+}
+
 /* ---- Content ---- */
 
 .dash-content {
@@ -321,4 +327,112 @@
   height: 10px;
   border-radius: 50%;
   background: var(--brand);
+}
+
+/* ---- Mobile: sidebar becomes an off-canvas drawer ---- */
+
+@media (max-width: 900px) {
+  .dash {
+    flex-direction: column;
+  }
+
+  .dash-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 16px;
+    background: var(--bg);
+    box-shadow: 0 2px 14px rgba(163, 174, 192, 0.28);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+
+  .topbar-logo svg {
+    height: 16px;
+  }
+
+  /* unread count sits at the far right of the bar */
+  .topbar-badge {
+    margin-left: auto;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #d97706;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .nav-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    color: var(--ink-soft);
+    background: var(--bg);
+    box-shadow: var(--neo-out-sm);
+    transition: box-shadow 0.15s var(--ease), color 0.15s var(--ease);
+  }
+
+  .nav-toggle:active {
+    box-shadow: var(--neo-in);
+  }
+
+  /* drawer: off-canvas, slides in from the left */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: 264px;
+    max-width: 82vw;
+    transform: translateX(-100%);
+    transition: transform 0.28s var(--ease);
+    box-shadow: 8px 0 30px rgba(115, 128, 148, 0.4);
+    z-index: 40;
+  }
+
+  .dash.nav-open .sidebar {
+    transform: translateX(0);
+  }
+
+  .nav-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 28, 40, 0.42);
+    z-index: 30;
+    animation: fadeIn 0.2s var(--ease) both;
+  }
+
+  .dash-content {
+    padding: 20px 16px 44px;
+  }
+
+  .page-head h1 {
+    font-size: 22px;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---- Mobile: let wide tables scroll horizontally instead of overflowing ---- */
+
+@media (max-width: 640px) {
+  /* width:max-content keeps the internal table intact (columns stay aligned)
+     while the block box scrolls whenever the content is wider than the card */
+  .data-table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }

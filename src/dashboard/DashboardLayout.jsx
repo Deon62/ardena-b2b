@@ -33,6 +33,7 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const footRef = useRef(null);
 
   const [unread, setUnread] = useState(0);
@@ -102,9 +103,24 @@ export default function DashboardLayout() {
   const [pageLoading, setPageLoading] = useState(true);
   useEffect(() => {
     setPageLoading(true);
+    setNavOpen(false); // close the mobile drawer whenever we navigate
     const t = setTimeout(() => setPageLoading(false), 600);
     return () => clearTimeout(t);
   }, [location.pathname]);
+
+  // mobile drawer: lock body scroll while open, close on Escape
+  useEffect(() => {
+    if (!navOpen) return;
+    function onKey(e) {
+      if (e.key === "Escape") setNavOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [navOpen]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -121,7 +137,27 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="dash">
+    <div className={"dash" + (navOpen ? " nav-open" : "")}>
+      <header className="dash-topbar">
+        <button
+          type="button"
+          className="nav-toggle"
+          onClick={() => setNavOpen((o) => !o)}
+          aria-label={navOpen ? "Close menu" : "Open menu"}
+          aria-expanded={navOpen}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+        </button>
+        <Logo className="topbar-logo" />
+        {unread > 0 && <span className="topbar-badge" aria-label={`${unread} unread`}>{unread}</span>}
+      </header>
+
+      {navOpen && (
+        <div className="nav-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />
+      )}
+
       <aside className="sidebar">
         <Logo className="sidebar-logo" />
 
