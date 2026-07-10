@@ -345,9 +345,6 @@ export function bookingDepositAction(ref, action) {
   });
 }
 
-export function sendPaymentPrompt(ref) {
-  return request(`/bookings/${encodeURIComponent(ref)}/payment-prompt`, { method: "POST" });
-}
 
 export function fetchBookingAgreement(ref) {
   return request(`/bookings/${encodeURIComponent(ref)}/agreement`);
