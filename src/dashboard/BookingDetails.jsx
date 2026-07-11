@@ -98,11 +98,20 @@ export default function BookingDetails() {
 
   function startPolling() {
     setPayWaiting(true);
-    pollDeadlineRef.current = Date.now() + 2 * 60 * 1000; // 2-minute timeout
+    pollDeadlineRef.current = Date.now() + 3 * 60 * 1000; // 3-minute timeout
     pollRef.current = setInterval(async () => {
       if (Date.now() > pollDeadlineRef.current) {
+        // Timed out on our end — fetch one last time to get the real state
+        try {
+          const updated = await fetchBooking(decodedRef);
+          setB(updated);
+          if (updated.payment === "Paid") {
+            toast("Payment confirmed! Booking marked as Paid.");
+          } else {
+            toast("Payment not confirmed — the customer may not have responded. You can resend the request.", "warn");
+          }
+        } catch { /* ignore */ }
         stopPolling();
-        toast("Payment not confirmed yet — ask the customer to check their phone.", "warn");
         return;
       }
       try {
@@ -114,7 +123,7 @@ export default function BookingDetails() {
         } else if (updated.payment === "Failed") {
           setB(updated);
           stopPolling();
-          toast("Payment failed. You can try again.", "danger");
+          toast("Payment was declined or timed out. You can resend the request.", "danger");
         }
       } catch {
         // silent — will retry next tick
@@ -573,7 +582,7 @@ export default function BookingDetails() {
                   disabled={busy || payWaiting}
                   onClick={openPayModal}
                 >
-                  {b.payment === "Prompt sent" ? "Resend payment request" : "Request payment"}
+                  {b.payment === "Prompt sent" ? "Resend payment request" : b.payment === "Failed" ? "Retry payment request" : "Request payment"}
                 </button>
                 <p className="side-hint">
                   Sends an STK push to the customer's phone for KES {fmtAmount(total)}.
