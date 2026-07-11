@@ -267,8 +267,8 @@ export default function BookingDetails() {
       const updated = await fetchBooking(b.ref);
       setB(updated);
       setPayModal(false);
-      toast(result.message || "STK push sent. Waiting for customer to pay…");
-      startPolling();
+      toast(result.message || "STK push sent.", result.success ? undefined : "danger");
+      if (result.success) startPolling();
     } catch (err) {
       toast(err.message || "Failed to send STK push", "danger");
     } finally {
