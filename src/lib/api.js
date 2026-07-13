@@ -158,6 +158,13 @@ export async function logout() {
   resetLocalCaches();
 }
 
+/* ---- Runtime client config ---- */
+
+// Public client config (e.g. Mapbox token sourced from the server environment).
+export function fetchConfig() {
+  return request("/config");
+}
+
 /* ---- Business profile & settings ---- */
 
 export function fetchBusiness() {

@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import { subscribe as subscribeConfig, getMapboxToken } from "./configStore";
 
 // Real satellite map for the tracking card. Mapbox GL is heavy, so it's loaded
-// on demand (kept out of the main bundle). Set a token in VITE_MAPBOX_TOKEN;
-// without one we fall back to the lightweight schematic below so the page still
-// works. Free tier: mapbox.com → Account → Access tokens.
-const TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-
+// on demand (kept out of the main bundle). The token comes from the backend via
+// GET /config (configStore), with VITE_MAPBOX_TOKEN as a local-dev fallback;
+// without either we render the lightweight schematic below so the page still
+// works.
 const STATUS_COLOR = { moving: "#12b76a", parked: "#f5a623", offline: "#8b929d" };
 
 function lineGeoJSON(trail) {
@@ -56,6 +56,7 @@ function Schematic({ trail }) {
 }
 
 export default function LiveMap({ trail = [], status = "parked" }) {
+  const token = useSyncExternalStore(subscribeConfig, getMapboxToken);
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
@@ -66,7 +67,7 @@ export default function LiveMap({ trail = [], status = "parked" }) {
 
   // Initialise the map once we have a token, a container and a first fix.
   useEffect(() => {
-    if (!TOKEN || !hasPoint || mapRef.current || !containerRef.current) return;
+    if (!token || !hasPoint || mapRef.current || !containerRef.current) return;
     let cancelled = false;
 
     (async () => {
@@ -74,7 +75,7 @@ export default function LiveMap({ trail = [], status = "parked" }) {
       await import("mapbox-gl/dist/mapbox-gl.css");
       if (cancelled || !containerRef.current) return;
 
-      gl.accessToken = TOKEN;
+      gl.accessToken = token;
       const map = new gl.Map({
         container: containerRef.current,
         style: "mapbox://styles/mapbox/satellite-streets-v12",
@@ -116,13 +117,13 @@ export default function LiveMap({ trail = [], status = "parked" }) {
       }
       markerRef.current = null;
     };
-    // Re-run only when the first fix arrives; live updates are handled below.
+    // Re-run when the token arrives or the first fix lands; live updates below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasPoint]);
+  }, [hasPoint, token]);
 
   // Live updates: slide the marker, extend the trail, ease the camera.
   useEffect(() => {
-    if (!TOKEN || !last) return;
+    if (!token || !last) return;
     const map = mapRef.current;
     const marker = markerRef.current;
     if (!map || !marker) return;
@@ -134,14 +135,15 @@ export default function LiveMap({ trail = [], status = "parked" }) {
     }
     map.easeTo({ center: [last.lng, last.lat], duration: 1200 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trail, status]);
+  }, [trail, status, token]);
 
-  if (!TOKEN) {
+  if (!token) {
     return (
       <>
         <Schematic trail={trail} />
         <p className="map-note">
-          Showing a schematic view. Add a Mapbox token in <code>VITE_MAPBOX_TOKEN</code> to see the live satellite map.
+          Showing a schematic view. The live satellite map appears once a Mapbox token is set in the backend
+          (<code>MAPBOX_TOKEN</code>, served via <code>/config</code>).
         </p>
       </>
     );

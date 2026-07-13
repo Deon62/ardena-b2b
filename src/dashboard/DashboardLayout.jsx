@@ -19,6 +19,7 @@ import {
 import { hydrateOnboarding } from "./onboardingStore";
 import { hydratePolicy } from "./policyStore";
 import { hydrateFleet } from "./fleetStore";
+import { hydrateConfig } from "./configStore";
 import {
   fetchMe,
   fetchBusiness,
@@ -59,6 +60,7 @@ export default function DashboardLayout() {
   useEffect(() => {
     let alive = true;
     hydrateFleet().catch(() => {}); // every page reads the fleet store
+    hydrateConfig(); // pulls the Mapbox token (and any future client config)
     (async () => {
       try {
         const { user, business: biz } = await fetchMe();
