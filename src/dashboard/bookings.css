@@ -251,24 +251,26 @@
 }
 
 .modal-card {
-  background: var(--surface, #fff);
-  border-radius: 14px;
+  background: var(--panel);
+  border-radius: var(--radius); /* sharp corners, per brand */
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  /* neomorphic lift, plus a soft drop so it reads off the dark scrim */
+  box-shadow: var(--neo-out), 0 24px 60px rgba(10, 13, 18, 0.22);
   overflow: hidden;
+  animation: rise 0.25s var(--ease);
 }
 
 .modal-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px 14px;
-  border-bottom: 1px solid var(--border, #ebebeb);
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--line);
 }
 
 .modal-head h3 {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   margin: 0;
 }
@@ -277,7 +279,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 20px;
+  padding: 22px;
 }
 
 .modal-actions {
@@ -290,23 +292,31 @@
 .field-label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   font-size: 13px;
-  font-weight: 500;
-  color: var(--ink-secondary, #555);
+  font-weight: 600;
+  color: var(--ink-soft);
 }
 
+/* carved neomorphic input, matching the shared .field inputs */
 .field-input {
-  padding: 9px 12px;
-  border: 1px solid var(--border, #ddd);
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--bg);
+  box-shadow: var(--neo-in);
   outline: none;
-  transition: border-color 0.15s;
+  transition: box-shadow 0.15s var(--ease);
+}
+
+.field-input::placeholder {
+  color: var(--ink-mute);
 }
 
 .field-input:focus {
-  border-color: var(--accent, #2563eb);
+  box-shadow: var(--neo-in), 0 0 0 3px var(--brand-soft);
 }
 
 .provider-group {
@@ -315,45 +325,47 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
 .provider-group legend {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .provider-option {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
 }
 
 .provider-option input[type="radio"] {
-  accent-color: var(--accent, #2563eb);
+  accent-color: var(--brand);
   width: 16px;
   height: 16px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
+/* raised neutral chip; presses in (carved) when its option is selected */
 .provider-pill {
-  padding: 5px 14px;
-  border-radius: 20px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
-  font-weight: 500;
-  border: 1.5px solid transparent;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--bg);
+  box-shadow: var(--neo-out-sm);
+  transition: color 0.15s var(--ease), box-shadow 0.15s var(--ease);
 }
 
-.mpesa-pill {
-  background: #e8f5e9;
-  color: #2e7d32;
-  border-color: #a5d6a7;
+.provider-option:hover .provider-pill {
+  color: var(--ink);
 }
 
-.airtel-pill {
-  background: #fff3e0;
-  color: #e65100;
-  border-color: #ffcc80;
+.provider-option input:checked + .provider-pill {
+  color: var(--ink);
+  box-shadow: var(--neo-in);
 }
 
 .side-hint {

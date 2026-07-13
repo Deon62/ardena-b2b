@@ -1,12 +1,19 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { fetchSubscription, fetchInvoices, payInvoice, fetchBillingUsage } from "../lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  fetchSubscription,
+  fetchInvoices,
+  payInvoice,
+  fetchBillingUsage,
+  fetchWalletTransactions,
+} from "../lib/api";
+import { startTopup, verifyTopup } from "./verificationsStore";
 import BillingTimeline from "./charts/BillingTimeline";
 import EmptyState, { EMPTY_ICONS } from "./EmptyState";
 import { toast } from "./toastStore";
 import "./overview.css";
 import "./fleet.css";
 import "./billing.css";
+import "./bookings.css"; // modal + provider-pill + pay-waiting styles
 
 const fmtAmount = (n) => Number(n).toLocaleString("en-KE");
 
@@ -23,23 +30,57 @@ function fmtDate(iso) {
   return d.toLocaleDateString("en-KE", { dateStyle: "medium" });
 }
 
+// The wallet-transactions endpoint mixes top-ups (money in) with per-check
+// debits (money out); field names aren't pinned down in the docs, so read them
+// defensively and treat anything that isn't clearly a check/debit as a top-up.
+function normalizeTxn(t) {
+  const kind = String(t.type || t.kind || t.category || "").toLowerCase();
+  const amount = Math.abs(Number(t.amount) || 0);
+  const isTopup = /top|credit|deposit|fund/.test(kind)
+    ? true
+    : /check|debit|lookup|verif/.test(kind)
+    ? false
+    : Number(t.amount) > 0;
+  return {
+    id: t.id || t.reference || `${t.date || ""}-${t.amount}`,
+    amount,
+    isTopup,
+    method: t.method || t.channel || t.description || (isTopup ? "Top-up" : "Renter check"),
+    date: (t.date || t.created_at || "").slice(0, 10),
+  };
+}
+
 export default function Billing() {
   const [sub, setSub] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [usage, setUsage] = useState(null);
+  const [txns, setTxns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [payingRef, setPayingRef] = useState(null);
 
+  // top-up modal + polling
+  const [topupModal, setTopupModal] = useState(false);
+  const [topupAmount, setTopupAmount] = useState("");
+  const [topupMethod, setTopupMethod] = useState("mpesa");
+  const [topupPhone, setTopupPhone] = useState("");
+  const [topupBusy, setTopupBusy] = useState(false);
+  const [topupWaiting, setTopupWaiting] = useState(false);
+  const pollRef = useRef(null);
+  const pollDeadlineRef = useRef(null);
+
   const load = useCallback(async () => {
     try {
-      const [subData, invData, usageData] = await Promise.all([
+      const [subData, invData, usageData, txData] = await Promise.all([
         fetchSubscription(),
         fetchInvoices(),
         fetchBillingUsage(),
+        fetchWalletTransactions({ per_page: 100 }).catch(() => null),
       ]);
       setSub(subData);
       setInvoices(invData.data || []);
       setUsage(usageData);
+      const rows = Array.isArray(txData) ? txData : txData?.data || [];
+      setTxns(rows.map(normalizeTxn));
     } catch (err) {
       toast(err.message || "Failed to load billing", "danger");
     } finally {
@@ -50,6 +91,95 @@ export default function Billing() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // stop polling if the user leaves the page mid-top-up
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  function stopTopupPolling() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    setTopupWaiting(false);
+  }
+
+  // Poll the top-up until Paystack confirms it, then refresh the wallet figures.
+  // 3-minute cap — STK prompts expire on-device well before then.
+  function startTopupPolling(reference) {
+    setTopupWaiting(true);
+    pollDeadlineRef.current = Date.now() + 3 * 60 * 1000;
+    let inFlight = false;
+
+    async function tick() {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const res = await verifyTopup(reference);
+        const status = String(res?.status || "");
+        if (/success|paid|complete/i.test(status)) {
+          stopTopupPolling();
+          await load();
+          toast("Wallet topped up.");
+        } else if (/fail|cancel|declin|timeout|expire/i.test(status) || Date.now() > pollDeadlineRef.current) {
+          stopTopupPolling();
+          await load();
+          toast("Top-up wasn't confirmed — the prompt may have expired. You can try again.", "warn");
+        }
+        // still pending — retry next tick
+      } catch {
+        // network hiccup — retry next tick
+      } finally {
+        inFlight = false;
+      }
+    }
+
+    pollRef.current = setInterval(tick, 6000);
+  }
+
+  function openTopupModal() {
+    setTopupAmount("");
+    setTopupMethod("mpesa");
+    setTopupModal(true);
+  }
+
+  async function handleTopup(e) {
+    e.preventDefault();
+    if (topupBusy) return;
+    const amount = Number(topupAmount);
+    if (!amount || amount <= 0) {
+      toast("Enter a top-up amount.", "danger");
+      return;
+    }
+    if (topupMethod === "mpesa" && !topupPhone.trim()) {
+      toast("Enter the M-Pesa phone number.", "danger");
+      return;
+    }
+    setTopupBusy(true);
+    try {
+      const res = await startTopup({
+        amount,
+        method: topupMethod,
+        phone: topupMethod === "mpesa" ? topupPhone.trim() : undefined,
+      });
+      const reference = res.reference || res.paystack_reference;
+      if (topupMethod === "card" && res.checkout_url) {
+        window.open(res.checkout_url, "_blank", "noopener,noreferrer");
+        toast("Paystack checkout opened — complete your payment there.");
+      } else {
+        toast("STK push sent — enter your M-Pesa PIN to complete the top-up.");
+      }
+      setTopupModal(false);
+      if (reference) startTopupPolling(reference);
+    } catch (err) {
+      toast(err.message || "Failed to start top-up", "danger");
+    } finally {
+      setTopupBusy(false);
+    }
+  }
 
   async function handlePayInvoice(inv) {
     if (payingRef) return;
@@ -79,6 +209,8 @@ export default function Billing() {
 
   const totalSpend = usage ? usage.total : 0;
   const paidInvoices = invoices.filter((i) => i.status === "Paid");
+  const topups = txns.filter((t) => t.isTopup);
+  const toppedUpTotal = topups.reduce((sum, t) => sum + t.amount, 0);
 
   return (
     <>
@@ -178,14 +310,50 @@ export default function Billing() {
                     {Math.floor(usage.wallet_balance / usage.check_price)} checks left
                   </p>
                 </div>
-                <Link className="btn wallet-btn" to="/dashboard/verification">
-                  Top up
-                </Link>
+                {topupWaiting ? (
+                  <span className="pay-waiting">
+                    <span className="pay-waiting-dot" />
+                    Waiting for payment…
+                    <button type="button" className="icon-btn" onClick={stopTopupPolling}>Stop</button>
+                  </span>
+                ) : (
+                  <button type="button" className="btn wallet-btn" onClick={openTopupModal}>
+                    Top up
+                  </button>
+                )}
               </div>
             </>
           )}
         </section>
       </div>
+
+      {/* ---- Wallet top-ups ---- */}
+      <section className="panel-card">
+        <header className="card-head">
+          <h2>Wallet top-ups</h2>
+          <p>Money you've added for renter checks</p>
+        </header>
+        <p className="util-hero">KES {fmtAmount(toppedUpTotal)}</p>
+        <p className="side-hint" style={{ marginTop: 0 }}>
+          {topups.length > 0
+            ? `Topped up across ${topups.length} payment${topups.length > 1 ? "s" : ""}.`
+            : "Nothing topped up yet — use Top up above to add wallet balance."}
+          {usage ? ` Current balance KES ${fmtAmount(usage.wallet_balance)}.` : ""}
+        </p>
+        {topups.length > 0 && (
+          <div className="topup-list">
+            {topups.slice(0, 6).map((t) => (
+              <div className="topup-row" key={t.id}>
+                <div className="topup-main">
+                  <p className="topup-method">{t.method}</p>
+                  <p className="topup-date">{fmtDate(t.date)}</p>
+                </div>
+                <p className="topup-amount">+ KES {fmtAmount(t.amount)}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* ---- Invoices ---- */}
       <section className="panel-card">
@@ -232,6 +400,81 @@ export default function Billing() {
           )}
         </div>
       </section>
+
+      {/* ---- Top-up modal ---- */}
+      {topupModal && (
+        <div className="modal-overlay" onClick={() => !topupBusy && setTopupModal(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <header className="modal-head">
+              <h3>Top up check wallet</h3>
+              <button type="button" className="icon-btn" disabled={topupBusy} onClick={() => setTopupModal(false)}>✕</button>
+            </header>
+            <form onSubmit={handleTopup} className="modal-body">
+              <label className="field-label">
+                Amount (KES)
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  className="field-input"
+                  value={topupAmount}
+                  onChange={(e) => setTopupAmount(e.target.value)}
+                  placeholder="e.g. 1000"
+                  required
+                  autoFocus
+                />
+              </label>
+              <fieldset className="provider-group">
+                <legend className="field-label">Payment method</legend>
+                <label className="provider-option">
+                  <input
+                    type="radio"
+                    name="topup-method"
+                    value="mpesa"
+                    checked={topupMethod === "mpesa"}
+                    onChange={() => setTopupMethod("mpesa")}
+                  />
+                  <span className="provider-pill mpesa-pill">M-Pesa</span>
+                </label>
+                <label className="provider-option">
+                  <input
+                    type="radio"
+                    name="topup-method"
+                    value="card"
+                    checked={topupMethod === "card"}
+                    onChange={() => setTopupMethod("card")}
+                  />
+                  <span className="provider-pill card-pill">Card</span>
+                </label>
+              </fieldset>
+              {topupMethod === "mpesa" && (
+                <label className="field-label">
+                  M-Pesa phone
+                  <input
+                    type="tel"
+                    className="field-input"
+                    value={topupPhone}
+                    onChange={(e) => setTopupPhone(e.target.value)}
+                    placeholder="07XXXXXXXX"
+                    required
+                  />
+                </label>
+              )}
+              <p className="side-hint" style={{ marginTop: 0 }}>
+                {topupMethod === "mpesa"
+                  ? "An STK push goes to this phone — enter the M-Pesa PIN to complete."
+                  : "A Paystack checkout opens in a new tab to complete the card payment."}
+              </p>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" disabled={topupBusy} onClick={() => setTopupModal(false)}>Cancel</button>
+                <button type="submit" className="btn mpesa-btn" disabled={topupBusy}>
+                  {topupBusy ? "Starting…" : "Top up"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }
