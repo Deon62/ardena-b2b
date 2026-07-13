@@ -16,7 +16,7 @@ export default function AddChauffeur() {
   const [status, setStatus] = useState("Available");
   const [expiry, setExpiry] = useState("");
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const name = f.get("name").trim();
@@ -29,21 +29,27 @@ export default function AddChauffeur() {
       return;
     }
 
+    setError("");
     setSaving(true);
-    const created = addChauffeur({
-      name,
-      phone: f.get("phone").trim(),
-      email: f.get("email").trim(),
-      id_no: f.get("id_no").trim(),
-      licence_no: f.get("licence_no").trim(),
-      licence_expiry: expiry,
-      daily_rate: Number(f.get("daily_rate")) || 0,
-      status,
-      notes: f.get("notes").trim(),
-    });
-    setSaving(false);
-    toast(`${name} added to your chauffeurs.`);
-    navigate(`/dashboard/chauffeurs/${created.id}`);
+    try {
+      const created = await addChauffeur({
+        name,
+        phone: f.get("phone").trim(),
+        email: f.get("email").trim(),
+        id_no: f.get("id_no").trim(),
+        licence_no: f.get("licence_no").trim(),
+        licence_expiry: expiry,
+        daily_rate: Number(f.get("daily_rate")) || 0,
+        status,
+        notes: f.get("notes").trim(),
+      });
+      toast(`${name} added to your chauffeurs.`);
+      navigate(`/dashboard/chauffeurs/${created.id}`);
+    } catch (err) {
+      setError(err.message || "Couldn't add the chauffeur. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (

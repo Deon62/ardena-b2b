@@ -35,11 +35,15 @@ export default function TrackingDetails() {
   const tracker = useSyncExternalStore(subscribeTrackers, () => getTracker(decodedPlate));
   const [confirmOff, setConfirmOff] = useState(false);
 
-  function handleDisconnect() {
+  async function handleDisconnect() {
     setConfirmOff(false);
-    disconnectTracker(decodedPlate);
-    toast(`Tracker disconnected from ${decodedPlate}.`);
-    navigate("/dashboard/tracking");
+    try {
+      await disconnectTracker(decodedPlate);
+      toast(`Tracker disconnected from ${decodedPlate}.`);
+      navigate("/dashboard/tracking");
+    } catch (err) {
+      toast(err.message || "Couldn't disconnect the tracker.", "danger");
+    }
   }
 
   const back = (

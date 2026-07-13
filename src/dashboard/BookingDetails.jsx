@@ -8,6 +8,8 @@ import {
   bookingDepositAction,
   sendStkPush,
   checkChargeStatus,
+  uploadHandoverPhotos,
+  deleteHandoverPhoto,
 } from "../lib/api";
 import { useSyncExternalStore } from "react";
 import {
@@ -21,16 +23,29 @@ import { downloadAgreement } from "./pdf";
 import { toast } from "./toastStore";
 import DatePicker from "./DatePicker";
 import Dropdown from "../components/Dropdown";
+import { compressImage } from "./handoverPhotosStore";
 import {
-  subscribe as subscribePhotos,
-  getPhotos,
-  addPhotos,
-  compressImage,
-} from "./handoverPhotosStore";
+  subscribe as subscribeChauffeurs,
+  getChauffeurs,
+  assignChauffeur,
+  unassignChauffeur,
+} from "./chauffeursStore";
 import "./fleet.css";
 import "./bookings.css";
 
-const fmtAmount = (n) => n.toLocaleString("en-KE");
+const fmtAmount = (n) => Number(n || 0).toLocaleString("en-KE");
+
+// Turn staged (compressed) data-URL previews into File objects for multipart upload.
+async function stagedToFiles(pending) {
+  return Promise.all(
+    pending.map(async (p, i) => {
+      const blob = await (await fetch(p.url)).blob();
+      return new File([blob], `handover-${Date.now()}-${i}.jpg`, {
+        type: blob.type || "image/jpeg",
+      });
+    })
+  );
+}
 
 const FUEL_LEVELS = ["Full", "3/4", "1/2", "1/4", "Reserve"];
 
@@ -45,19 +60,9 @@ const NEXT_STEP = {
   Active: { label: "Mark completed", to: "Completed" },
 };
 
-// A paid booking that is still Pending has effectively been accepted — advance
-// it to Confirmed so the status chip stops reading "Pending" once money is in.
-// Returns the (possibly updated) booking; falls back to the original on error.
-async function confirmIfPaid(booking) {
-  if (booking && booking.payment === "Paid" && booking.status === "Pending") {
-    try {
-      return await setBookingStatus(booking.ref, "Confirmed");
-    } catch {
-      return booking;
-    }
-  }
-  return booking;
-}
+// Note: a paid-but-Pending booking is advanced to Confirmed server-side now
+// (the Paystack webhook / charge poll does it — b2b.md §F), so the frontend no
+// longer patches the status after payment.
 
 const CANCELLABLE = ["Pending", "Confirmed"];
 
@@ -87,17 +92,19 @@ export default function BookingDetails() {
   const [inPending, setInPending] = useState([]); // photos staged before check-in
   const [photoBusy, setPhotoBusy] = useState(false);
   const [lightbox, setLightbox] = useState(null); // enlarged photo URL
+  const [chauffeurPick, setChauffeurPick] = useState(""); // driver chosen in the assign picker
+  const [assignBusy, setAssignBusy] = useState(false);
   const pollRef = useRef(null);
   const pollDeadlineRef = useRef(null);
   const pollPsRef = useRef(null); // Paystack reference being polled
 
+  const chauffeurs = useSyncExternalStore(subscribeChauffeurs, getChauffeurs);
   const decodedRef = decodeURIComponent(ref);
-  const photos = useSyncExternalStore(subscribePhotos, () => getPhotos(decodedRef));
 
   const load = useCallback(async () => {
     try {
       const data = await fetchBooking(decodedRef);
-      setB(await confirmIfPaid(data));
+      setB(data);
     } catch (err) {
       toast(err.message || "Failed to load booking", "danger");
     } finally {
@@ -145,7 +152,7 @@ export default function BookingDetails() {
             const res = await checkChargeStatus(psRef);
             if (res.charge_status === "success") {
               const updated = await fetchBooking(decodedRef);
-              setB(await confirmIfPaid(updated));
+              setB(updated);
               toast("Payment confirmed! Booking marked as Paid.");
             } else {
               // Refresh booking so the chip reflects the current DB state
@@ -162,7 +169,7 @@ export default function BookingDetails() {
 
         if (res.charge_status === "success") {
           const updated = await fetchBooking(decodedRef);
-          setB(await confirmIfPaid(updated));
+          setB(updated);
           stopPolling();
           toast("Payment confirmed! Booking marked as Paid.");
         } else if (res.charge_status === "failed" || res.charge_status === "timeout") {
@@ -222,6 +229,39 @@ export default function BookingDetails() {
   const penalty = hoIn ? hoIn.penalty : 0;
   const depositAmt = b.deposit_amount ?? policy.deposit;
 
+  // Chauffeur assignment (§C): a driver is linked to this booking when their
+  // derived assignment points back at this ref.
+  const assignedChauffeur = chauffeurs.find((c) => c.assignment?.booking_ref === b.ref) || null;
+  const availableChauffeurs = chauffeurs.filter((c) => c.status === "Available" && !c.assignment);
+  const canAssignChauffeur = b.status !== "Cancelled" && b.status !== "Completed";
+
+  async function handleAssignChauffeur() {
+    if (!chauffeurPick || assignBusy) return;
+    setAssignBusy(true);
+    try {
+      const c = await assignChauffeur(chauffeurPick, b.ref);
+      setChauffeurPick("");
+      toast(`${c.name} assigned to this booking.`);
+    } catch (err) {
+      toast(err.message || "Couldn't assign the chauffeur.", "danger");
+    } finally {
+      setAssignBusy(false);
+    }
+  }
+
+  async function handleUnassignChauffeur() {
+    if (!assignedChauffeur || assignBusy) return;
+    setAssignBusy(true);
+    try {
+      await unassignChauffeur(assignedChauffeur.id);
+      toast("Chauffeur unassigned from this booking.");
+    } catch (err) {
+      toast(err.message || "Couldn't unassign the chauffeur.", "danger");
+    } finally {
+      setAssignBusy(false);
+    }
+  }
+
   async function doStatus(newStatus) {
     if (busy) return;
     setBusy(true);
@@ -265,12 +305,18 @@ export default function BookingDetails() {
         fuel: outFuel,
         notes: f.get("notes").trim() || null,
       });
+      let finalBooking = updated;
       if (outPending.length) {
-        const ok = addPhotos(b.ref, "out", outPending.map((p) => p.url));
-        if (!ok) toast("Check-out saved, but photos couldn't be stored on this device (storage full).", "warn");
+        try {
+          const files = await stagedToFiles(outPending);
+          await uploadHandoverPhotos(b.ref, "out", files);
+          finalBooking = await fetchBooking(b.ref); // reflect the uploaded photos
+        } catch (err) {
+          toast(`Check-out saved, but photos couldn't be uploaded: ${err.message || "please retry"}`, "warn");
+        }
         setOutPending([]);
       }
-      setB(updated);
+      setB(finalBooking);
       toast("Check-out recorded, keys can go out.");
     } catch (err) {
       toast(err.message || "Failed to record check-out", "danger");
@@ -292,14 +338,21 @@ export default function BookingDetails() {
         return_date: retDate || b.dropoff,
         return_time: retTime,
       });
+      let finalBooking = updated;
       if (inPending.length) {
-        const ok = addPhotos(b.ref, "inn", inPending.map((p) => p.url));
-        if (!ok) toast("Check-in saved, but photos couldn't be stored on this device (storage full).", "warn");
+        try {
+          const files = await stagedToFiles(inPending);
+          // API phase is "in"; the frontend's internal key for check-in is "inn".
+          await uploadHandoverPhotos(b.ref, "in", files);
+          finalBooking = await fetchBooking(b.ref);
+        } catch (err) {
+          toast(`Check-in saved, but photos couldn't be uploaded: ${err.message || "please retry"}`, "warn");
+        }
         setInPending([]);
       }
-      setB(updated);
-      const late = updated.handover?.inn?.late_hours || 0;
-      const pen = updated.handover?.inn?.penalty || 0;
+      setB(finalBooking);
+      const late = finalBooking.handover?.inn?.late_hours || 0;
+      const pen = finalBooking.handover?.inn?.penalty || 0;
       if (late > 0) {
         toast(`Check-in recorded, ${late} hr${late > 1 ? "s" : ""} late. KES ${pen.toLocaleString("en-KE")} penalty applied.`, "danger");
       } else {
@@ -389,14 +442,32 @@ export default function BookingDetails() {
   }
 
   // Read-only gallery shown once a handover is recorded.
-  function renderGallery(list) {
-    if (!list.length) return null;
+  async function handleDeletePhoto(phase, photoId) {
+    try {
+      await deleteHandoverPhoto(b.ref, phase, photoId);
+      setB(await fetchBooking(b.ref));
+    } catch (err) {
+      toast(err.message || "Couldn't remove the photo.", "danger");
+    }
+  }
+
+  // phase: "out" | "in" (API phase; the check-in payload key is "inn")
+  function renderGallery(list, phase) {
+    if (!list || !list.length) return null;
     return (
       <div className="photo-grid photo-grid-view">
         {list.map((p) => (
-          <button type="button" className="photo-thumb" key={p.id} onClick={() => setLightbox(p.url)}>
-            <img src={p.url} alt="Handover condition" />
-          </button>
+          <div className="photo-thumb" key={p.id}>
+            <img src={p.url} alt="Handover condition" onClick={() => setLightbox(p.url)} />
+            <button
+              type="button"
+              className="photo-del"
+              onClick={() => handleDeletePhoto(phase, p.id)}
+              aria-label="Remove photo"
+            >
+              ✕
+            </button>
+          </div>
         ))}
       </div>
     );
@@ -570,7 +641,7 @@ export default function BookingDetails() {
                   </span>
                 </div>
                 {hoOut.notes && <p className="ho-note">Out: {hoOut.notes}</p>}
-                {renderGallery(photos.out)}
+                {renderGallery(hoOut.photos, "out")}
               </>
             )}
 
@@ -648,7 +719,7 @@ export default function BookingDetails() {
                   </span>
                 </div>
                 {hoIn.notes && <p className="ho-note">In: {hoIn.notes}</p>}
-                {renderGallery(photos.inn)}
+                {renderGallery(hoIn.photos, "in")}
               </>
             )}
 
@@ -781,6 +852,77 @@ export default function BookingDetails() {
                   </form>
                 </div>
               </div>
+            )}
+          </section>
+
+          <section className="panel-card">
+            <header className="card-head">
+              <h2>Chauffeur</h2>
+              <p>Driver assigned to this rental</p>
+            </header>
+            {assignedChauffeur ? (
+              <>
+                <div className="pay-row">
+                  <span>Driver</span>
+                  <Link className="spec-link" to={`/dashboard/chauffeurs/${assignedChauffeur.id}`}>
+                    {assignedChauffeur.name}
+                  </Link>
+                </div>
+                <div className="pay-row">
+                  <span>Phone</span>
+                  <span className="mini-amount">{assignedChauffeur.phone}</span>
+                </div>
+                <div className="pay-row">
+                  <span>Daily rate</span>
+                  <span className="mini-amount">KES {fmtAmount(assignedChauffeur.daily_rate)}</span>
+                </div>
+                <button
+                  type="button"
+                  className="icon-btn danger"
+                  disabled={assignBusy}
+                  onClick={handleUnassignChauffeur}
+                >
+                  Unassign chauffeur
+                </button>
+              </>
+            ) : canAssignChauffeur ? (
+              availableChauffeurs.length ? (
+                <>
+                  <label className="field-label">
+                    Available chauffeurs
+                    <Dropdown
+                      value={chauffeurPick}
+                      onChange={setChauffeurPick}
+                      options={availableChauffeurs.map((c) => ({
+                        value: c.id,
+                        label: `${c.name} · ${c.phone}`,
+                      }))}
+                      placeholder="Choose a driver"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-primary pay-btn"
+                    disabled={!chauffeurPick || assignBusy}
+                    onClick={handleAssignChauffeur}
+                  >
+                    {assignBusy ? "Assigning…" : "Assign chauffeur"}
+                  </button>
+                  <p className="side-hint">
+                    Assigning sets the driver to <strong>On trip</strong> for this booking's dates.
+                  </p>
+                </>
+              ) : (
+                <p className="side-hint">
+                  No available chauffeurs.{" "}
+                  <Link className="spec-link" to="/dashboard/chauffeurs/new">Add one</Link>{" "}
+                  or free up a driver from another trip.
+                </p>
+              )
+            ) : (
+              <p className="side-hint">
+                This booking is {b.status.toLowerCase()} — no chauffeur can be assigned.
+              </p>
             )}
           </section>
 

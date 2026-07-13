@@ -1,41 +1,49 @@
-// Vehicle GPS / telematics, kept on the device until a telematics endpoint
-// ships. Trackers attach to a vehicle by number plate; the fleet list itself
-// comes from the live fleet store, and this overlays live location on top.
-//
-// With no real hardware wired up, a lightweight simulator nudges "moving"
-// trackers every few seconds so the map and list feel live. Swapping this for a
-// real provider webhook later means replacing the ticker with pushed pings.
+// Vehicle GPS / telematics, backed by the live tracking API (b2b.md §D).
+// Trackers attach to a vehicle by number plate; the fleet list itself comes from
+// the fleet store, and this overlays live location on top. Real location arrives
+// via the provider webhook on the backend; the dashboard polls GET /tracking
+// while the tracking screens are open so the map and list stay live.
+import {
+  fetchTrackers,
+  connectTracker as apiConnectTracker,
+  disconnectTracker as apiDisconnectTracker,
+} from "../lib/api";
 
-const KEY = "ardena-trackers";
-
-// Nairobi-ish provider names + a rough city centre to scatter trackers around.
+// Providers offered in the connect dialog (label list is client-side).
 export const PROVIDERS = ["Ardena GPS", "Fahari Track", "Track24 Kenya", "Cartrack", "Generic OBD-II"];
-const CENTER = { lat: -1.286389, lng: 36.817223 };
-const AREAS = ["Westlands", "Kilimani", "Karen", "CBD", "Ruaka", "Lang'ata", "Embakasi", "Parklands", "Kasarani", "Ngong Road"];
 
-function load() {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    /* ignore */
-  }
-  return {};
-}
+const POLL_MS = 12000; // refresh cadence while the screens are open
 
-let store = load();
+let store = {}; // keyed by plate
 const listeners = new Set();
-
-function persist() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(store));
-  } catch {
-    /* ignore */
-  }
-}
 
 function emit() {
   listeners.forEach((fn) => fn());
+}
+
+// API sends snake_case; the UI reads camelCase. Trail items already match
+// ({ lat, lng, at, speed }). lat/lng can be null until the first ping lands.
+function normalize(t) {
+  return {
+    plate: t.plate,
+    provider: t.provider,
+    deviceId: t.device_id ?? t.deviceId ?? "",
+    connectedAt: t.connected_at ?? t.connectedAt ?? null,
+    status: t.status || "offline",
+    lat: t.lat ?? null,
+    lng: t.lng ?? null,
+    speed: t.speed ?? 0,
+    ignition: !!t.ignition,
+    lastPing: t.last_ping ?? t.lastPing ?? null,
+    address: t.address ?? "",
+    trail: Array.isArray(t.trail) ? t.trail : [],
+  };
+}
+
+function indexByPlate(list) {
+  const next = {};
+  for (const t of list) next[t.plate] = normalize(t);
+  return next;
 }
 
 export function getTrackers() {
@@ -46,16 +54,59 @@ export function getTracker(plate) {
   return store[plate] || null;
 }
 
-const rnd = (spread) => (Math.random() - 0.5) * spread;
+// One fetch at a time; every caller waits on the same request.
+let hydrating = null;
 
-// deterministic-ish area label from a coordinate so it reads like geocoding
-function areaFor(lat, lng) {
-  const i = Math.abs(Math.round((lat + lng) * 1000)) % AREAS.length;
-  return AREAS[i];
+export function hydrateTracking() {
+  if (!hydrating) {
+    hydrating = (async () => {
+      const data = await fetchTrackers();
+      const list = Array.isArray(data) ? data : data?.data || [];
+      store = indexByPlate(list);
+      emit();
+    })().finally(() => {
+      hydrating = null;
+    });
+  }
+  return hydrating;
 }
 
-function fmtCoord(lat, lng) {
-  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+// Wipe on session change so a new login doesn't inherit the previous trackers.
+export function resetTracking() {
+  store = {};
+  emit();
+}
+
+export async function connectTracker(plate, { provider, deviceId } = {}) {
+  const t = await apiConnectTracker(plate, {
+    provider,
+    device_id: deviceId || undefined,
+  });
+  store = { ...store, [plate]: normalize(t) };
+  emit();
+}
+
+export async function disconnectTracker(plate) {
+  await apiDisconnectTracker(plate);
+  const next = { ...store };
+  delete next[plate];
+  store = next;
+  emit();
+}
+
+/* ---- live polling ---- */
+
+let ticker = null;
+
+async function poll() {
+  try {
+    const data = await fetchTrackers();
+    const list = Array.isArray(data) ? data : data?.data || [];
+    store = indexByPlate(list);
+    emit();
+  } catch {
+    /* keep the last good snapshot */
+  }
 }
 
 export function subscribe(fn) {
@@ -67,81 +118,9 @@ export function subscribe(fn) {
   };
 }
 
-export function connectTracker(plate, { provider, deviceId }) {
-  const lat = CENTER.lat + rnd(0.14);
-  const lng = CENTER.lng + rnd(0.14);
-  const moving = Math.random() > 0.5;
-  const now = new Date().toISOString();
-  store = {
-    ...store,
-    [plate]: {
-      plate,
-      provider,
-      deviceId: deviceId || `IMEI-${Math.floor(1e9 + Math.random() * 9e9)}`,
-      connectedAt: now,
-      status: moving ? "moving" : "parked",
-      lat,
-      lng,
-      speed: moving ? Math.round(20 + Math.random() * 60) : 0,
-      ignition: moving,
-      lastPing: now,
-      address: areaFor(lat, lng),
-      trail: [{ lat, lng, at: now, speed: moving ? 40 : 0 }],
-    },
-  };
-  persist();
-  emit();
-}
-
-export function disconnectTracker(plate) {
-  const next = { ...store };
-  delete next[plate];
-  store = next;
-  persist();
-  emit();
-}
-
-/* ---- live simulation ---- */
-
-let ticker = null;
-
-function tick() {
-  const plates = Object.keys(store);
-  if (!plates.length) return;
-  const now = new Date().toISOString();
-  let changed = false;
-
-  const next = { ...store };
-  for (const plate of plates) {
-    const t = next[plate];
-    if (t.status === "offline") continue;
-
-    // small chance a parked car pulls off, or a moving one stops
-    let status = t.status;
-    if (Math.random() < 0.15) status = status === "moving" ? "parked" : "moving";
-
-    if (status === "moving") {
-      const lat = t.lat + rnd(0.006);
-      const lng = t.lng + rnd(0.006);
-      const speed = Math.round(15 + Math.random() * 70);
-      const trail = [...(t.trail || []), { lat, lng, at: now, speed }].slice(-12);
-      next[plate] = { ...t, status, lat, lng, speed, ignition: true, lastPing: now, address: areaFor(lat, lng), trail };
-    } else {
-      next[plate] = { ...t, status, speed: 0, ignition: false, lastPing: now };
-    }
-    changed = true;
-  }
-
-  if (changed) {
-    store = next;
-    persist();
-    emit();
-  }
-}
-
 function startTicker() {
   if (ticker || typeof window === "undefined") return;
-  ticker = setInterval(tick, 5000);
+  ticker = setInterval(poll, POLL_MS);
 }
 
 function stopTicker() {
@@ -172,7 +151,12 @@ export function relativeTime(iso) {
 }
 
 export function mapsUrl(lat, lng) {
+  if (lat == null || lng == null) return "https://www.google.com/maps";
   return `https://www.google.com/maps?q=${lat},${lng}`;
 }
 
-export { fmtCoord };
+// null-safe: a freshly connected tracker has no fix until its first ping
+export function fmtCoord(lat, lng) {
+  if (lat == null || lng == null) return "—";
+  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+}

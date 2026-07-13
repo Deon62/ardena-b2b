@@ -20,6 +20,8 @@ import { hydrateOnboarding } from "./onboardingStore";
 import { hydratePolicy } from "./policyStore";
 import { hydrateFleet } from "./fleetStore";
 import { hydrateConfig } from "./configStore";
+import { hydrateChauffeurs } from "./chauffeursStore";
+import { hydrateTracking } from "./trackingStore";
 import {
   fetchMe,
   fetchBusiness,
@@ -61,6 +63,8 @@ export default function DashboardLayout() {
     let alive = true;
     hydrateFleet().catch(() => {}); // every page reads the fleet store
     hydrateConfig(); // pulls the Mapbox token (and any future client config)
+    hydrateChauffeurs().catch(() => {}); // chauffeur roster (§C)
+    hydrateTracking().catch(() => {}); // connected GPS trackers (§D)
     (async () => {
       try {
         const { user, business: biz } = await fetchMe();

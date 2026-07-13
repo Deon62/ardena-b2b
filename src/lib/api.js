@@ -9,6 +9,8 @@ import { resetBusiness } from "../dashboard/businessStore";
 import { resetOnboarding } from "../dashboard/onboardingStore";
 import { resetFleet } from "../dashboard/fleetStore";
 import { resetVerification } from "../dashboard/verificationsStore";
+import { resetChauffeurs } from "../dashboard/chauffeursStore";
+import { resetTracking } from "../dashboard/trackingStore";
 
 // locally cached per-account state, wiped whenever the session changes hands
 function resetLocalCaches() {
@@ -16,6 +18,8 @@ function resetLocalCaches() {
   resetOnboarding();
   resetFleet();
   resetVerification();
+  resetChauffeurs();
+  resetTracking();
 }
 
 const BASE =
@@ -357,6 +361,26 @@ export function fetchBookingAgreement(ref) {
   return request(`/bookings/${encodeURIComponent(ref)}/agreement`);
 }
 
+/* ---- Handover condition photos (§B) ---- */
+
+// phase: "out" (check-out) | "in" (check-in). `files` is a list of File/Blob.
+// Returns the phase's updated photo list ([{ id, url, at }]).
+export function uploadHandoverPhotos(ref, phase, files) {
+  const form = new FormData();
+  for (const f of files) form.append("files", f);
+  return request(`/bookings/${encodeURIComponent(ref)}/handover/${phase}/photos`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function deleteHandoverPhoto(ref, phase, photoId) {
+  return request(
+    `/bookings/${encodeURIComponent(ref)}/handover/${phase}/photos/${encodeURIComponent(photoId)}`,
+    { method: "DELETE" }
+  );
+}
+
 /* ---- Clients (§5) ---- */
 
 // params: { search, verification, page, per_page }
@@ -558,4 +582,75 @@ export async function exportReport({ type, from, to } = {}) {
     || `${type}-export.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/* ---- Chauffeurs (§C) ---- */
+
+// params: { status, search, page, per_page } → { data, total, page, per_page }
+export function fetchChauffeurs(params = {}) {
+  const qs = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v != null && v !== "")
+  ).toString();
+  return request(`/chauffeurs${qs ? `?${qs}` : ""}`);
+}
+
+// { name, phone, email?, id_no?, licence_no?, licence_expiry?, daily_rate?, status?, notes? }
+export function createChauffeur(payload) {
+  return request("/chauffeurs", { method: "POST", body: payload });
+}
+
+export function fetchChauffeur(id) {
+  return request(`/chauffeurs/${encodeURIComponent(id)}`);
+}
+
+// contact / licence / daily_rate / notes — status changes via setChauffeurStatus
+export function updateChauffeur(id, patch) {
+  return request(`/chauffeurs/${encodeURIComponent(id)}`, { method: "PATCH", body: patch });
+}
+
+export function deleteChauffeur(id) {
+  return request(`/chauffeurs/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+// { status: "Available" | "On trip" | "Off duty" }
+export function setChauffeurStatus(id, chauffeurStatus) {
+  return request(`/chauffeurs/${encodeURIComponent(id)}/status`, {
+    method: "POST",
+    body: { status: chauffeurStatus },
+  });
+}
+
+// { booking_ref } → sets assignment, status ⇒ On trip. 409 if already on a trip.
+export function assignChauffeur(id, bookingRef) {
+  return request(`/chauffeurs/${encodeURIComponent(id)}/assign`, {
+    method: "POST",
+    body: { booking_ref: bookingRef },
+  });
+}
+
+export function unassignChauffeur(id) {
+  return request(`/chauffeurs/${encodeURIComponent(id)}/unassign`, { method: "POST" });
+}
+
+/* ---- GPS / vehicle tracking (§D) ---- */
+
+// All connected trackers for the tenant → { data: [tracker] }
+export function fetchTrackers() {
+  return request("/tracking");
+}
+
+export function fetchTracker(plate) {
+  return request(`/vehicles/${encodeURIComponent(plate)}/tracker`);
+}
+
+// { provider, device_id? } → the tracker. 409 if already connected.
+export function connectTracker(plate, payload) {
+  return request(`/vehicles/${encodeURIComponent(plate)}/tracker`, {
+    method: "POST",
+    body: payload,
+  });
+}
+
+export function disconnectTracker(plate) {
+  return request(`/vehicles/${encodeURIComponent(plate)}/tracker`, { method: "DELETE" });
 }

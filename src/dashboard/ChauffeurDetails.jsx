@@ -5,6 +5,8 @@ import {
   getChauffeur,
   updateChauffeur,
   removeChauffeur,
+  setChauffeurStatus,
+  unassignChauffeur,
   CH_STATUSES,
   CH_CHIP,
   fmtDay,
@@ -54,13 +56,21 @@ export default function ChauffeurDetails() {
   const lic = licenceState(c.licence_expiry);
   const history = c.history || [];
 
-  function setStatus(s) {
-    updateChauffeur(c.id, { status: s });
+  async function setStatus(s) {
+    try {
+      await setChauffeurStatus(c.id, s);
+    } catch (err) {
+      toast(err.message || "Couldn't update duty status.", "danger");
+    }
   }
 
-  function endAssignment() {
-    updateChauffeur(c.id, { assignment: null, status: "Available" });
-    toast("Assignment ended, chauffeur set to available.");
+  async function endAssignment() {
+    try {
+      await unassignChauffeur(c.id);
+      toast("Assignment ended, chauffeur set to available.");
+    } catch (err) {
+      toast(err.message || "Couldn't end the assignment.", "danger");
+    }
   }
 
   function openEdit() {
@@ -76,21 +86,29 @@ export default function ChauffeurDetails() {
     setEditing(true);
   }
 
-  function saveEdit(e) {
+  async function saveEdit(e) {
     e.preventDefault();
-    updateChauffeur(c.id, {
-      ...form,
-      daily_rate: Number(form.daily_rate) || 0,
-    });
-    setEditing(false);
-    toast("Chauffeur details updated.");
+    try {
+      await updateChauffeur(c.id, {
+        ...form,
+        daily_rate: Number(form.daily_rate) || 0,
+      });
+      setEditing(false);
+      toast("Chauffeur details updated.");
+    } catch (err) {
+      toast(err.message || "Couldn't save the changes.", "danger");
+    }
   }
 
-  function del() {
+  async function del() {
     setConfirmDel(false);
-    removeChauffeur(c.id);
-    toast(`${c.name} removed from your drivers.`);
-    navigate("/dashboard/chauffeurs");
+    try {
+      await removeChauffeur(c.id);
+      toast(`${c.name} removed from your drivers.`);
+      navigate("/dashboard/chauffeurs");
+    } catch (err) {
+      toast(err.message || "Couldn't remove that chauffeur.", "danger");
+    }
   }
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));

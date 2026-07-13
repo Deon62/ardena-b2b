@@ -61,12 +61,21 @@ export default function Tracking() {
     setDeviceId("");
   }
 
-  function submitConnect(e) {
+  const [connecting, setConnecting] = useState(false);
+
+  async function submitConnect(e) {
     e.preventDefault();
-    if (!connectFor) return;
-    connectTracker(connectFor.plate, { provider, deviceId: deviceId.trim() });
-    toast(`Tracker connected to ${connectFor.plate}.`);
-    setConnectFor(null);
+    if (!connectFor || connecting) return;
+    setConnecting(true);
+    try {
+      await connectTracker(connectFor.plate, { provider, deviceId: deviceId.trim() });
+      toast(`Tracker connected to ${connectFor.plate}.`);
+      setConnectFor(null);
+    } catch (err) {
+      toast(err.message || "Couldn't connect the tracker.", "danger");
+    } finally {
+      setConnecting(false);
+    }
   }
 
   if (!loaded) {
@@ -153,14 +162,18 @@ export default function Tracking() {
                   <td>
                     {t ? (
                       <>
-                        <p>{t.address}</p>
-                        <p className="cell-sub mono">{t.lat.toFixed(4)}, {t.lng.toFixed(4)}</p>
+                        <p>{t.address || "Waiting for first ping"}</p>
+                        <p className="cell-sub mono">
+                          {t.lat != null && t.lng != null
+                            ? `${t.lat.toFixed(4)}, ${t.lng.toFixed(4)}`
+                            : "—"}
+                        </p>
                       </>
                     ) : (
                       <span className="cell-sub">—</span>
                     )}
                   </td>
-                  <td className="num">{t ? `${t.speed} km/h` : "—"}</td>
+                  <td className="num">{t && t.lat != null ? `${t.speed} km/h` : "—"}</td>
                   <td>{t ? relativeTime(t.lastPing) : "—"}</td>
                   <td className="actions-cell">
                     {t ? (
@@ -213,7 +226,9 @@ export default function Tracking() {
               </p>
               <div className="modal-actions">
                 <button type="button" className="btn btn-ghost" onClick={() => setConnectFor(null)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Connect tracker</button>
+                <button type="submit" className="btn btn-primary" disabled={connecting}>
+                  {connecting ? "Connecting…" : "Connect tracker"}
+                </button>
               </div>
             </form>
           </div>

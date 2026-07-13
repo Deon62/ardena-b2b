@@ -58,11 +58,15 @@ export default function Chauffeurs() {
     return { available, onTrip, avg };
   }, [chauffeurs]);
 
-  function confirmDelete() {
+  async function confirmDelete() {
     const c = pendingDelete;
     setPendingDelete(null);
-    removeChauffeur(c.id);
-    toast(`${c.name} removed from your drivers.`);
+    try {
+      await removeChauffeur(c.id);
+      toast(`${c.name} removed from your drivers.`);
+    } catch (err) {
+      toast(err.message || "Couldn't remove that chauffeur.", "danger");
+    }
   }
 
   return (
