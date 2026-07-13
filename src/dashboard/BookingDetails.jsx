@@ -39,6 +39,20 @@ const NEXT_STEP = {
   Active: { label: "Mark completed", to: "Completed" },
 };
 
+// A paid booking that is still Pending has effectively been accepted — advance
+// it to Confirmed so the status chip stops reading "Pending" once money is in.
+// Returns the (possibly updated) booking; falls back to the original on error.
+async function confirmIfPaid(booking) {
+  if (booking && booking.payment === "Paid" && booking.status === "Pending") {
+    try {
+      return await setBookingStatus(booking.ref, "Confirmed");
+    } catch {
+      return booking;
+    }
+  }
+  return booking;
+}
+
 const CANCELLABLE = ["Pending", "Confirmed"];
 
 const STATUS_TOAST = {
@@ -72,7 +86,7 @@ export default function BookingDetails() {
   const load = useCallback(async () => {
     try {
       const data = await fetchBooking(decodedRef);
-      setB(data);
+      setB(await confirmIfPaid(data));
     } catch (err) {
       toast(err.message || "Failed to load booking", "danger");
     } finally {
@@ -120,7 +134,7 @@ export default function BookingDetails() {
             const res = await checkChargeStatus(psRef);
             if (res.charge_status === "success") {
               const updated = await fetchBooking(decodedRef);
-              setB(updated);
+              setB(await confirmIfPaid(updated));
               toast("Payment confirmed! Booking marked as Paid.");
             } else {
               // Refresh booking so the chip reflects the current DB state
@@ -137,7 +151,7 @@ export default function BookingDetails() {
 
         if (res.charge_status === "success") {
           const updated = await fetchBooking(decodedRef);
-          setB(updated);
+          setB(await confirmIfPaid(updated));
           stopPolling();
           toast("Payment confirmed! Booking marked as Paid.");
         } else if (res.charge_status === "failed" || res.charge_status === "timeout") {
