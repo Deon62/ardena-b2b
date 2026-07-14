@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   fetchMarketplaceListing,
   saveMarketplaceListing,
   publishMarketplaceListing,
   hideMarketplaceListing,
+  uploadMarketplaceCover,
+  uploadMarketplaceImages,
 } from "../lib/api";
 import { toast } from "./toastStore";
 import "./fleet.css";
@@ -63,7 +65,12 @@ export default function MarketplaceListing() {
   const [listing, setListing] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [showCommission, setShowCommission] = useState(false);
+
+  // file input refs
+  const coverInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
   // form state
   const [description, setDescription] = useState("");
@@ -82,6 +89,7 @@ export default function MarketplaceListing() {
   const [rules, setRules] = useState("");
   const [locationName, setLocationName] = useState("");
   const [coverImage, setCoverImage] = useState("");
+  const [carImages, setCarImages] = useState([]); // array of URLs
   const [driveSetting, setDriveSetting] = useState("self_only");
   const [depositRequired, setDepositRequired] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
@@ -105,6 +113,7 @@ export default function MarketplaceListing() {
     setRules(data.rules || "");
     setLocationName(data.location_name || "");
     setCoverImage(data.cover_image || "");
+    setCarImages(data.car_images || []);
     setDriveSetting(data.drive_setting || "self_only");
     setDepositRequired(data.deposit_required || false);
     setDepositAmount(data.deposit_amount ?? "");
@@ -156,6 +165,7 @@ export default function MarketplaceListing() {
       rules: rules || null,
       location_name: locationName || null,
       cover_image: coverImage || null,
+      car_images: carImages.length > 0 ? carImages : null,
       drive_setting: driveSetting,
       deposit_required: depositRequired,
       deposit_amount: depositAmount !== "" ? Number(depositAmount) : null,
@@ -166,6 +176,47 @@ export default function MarketplaceListing() {
   function _updateCache(data) {
     _cache.set(decodedPlate, data);
     setListing(data);
+  }
+
+  async function handleCoverUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError("");
+    try {
+      const res = await uploadMarketplaceCover(decodedPlate, file);
+      setCoverImage(res.url);
+      _cache.set(decodedPlate, { ..._cache.get(decodedPlate), cover_image: res.url });
+      toast("Cover image uploaded.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleGalleryUpload(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    setError("");
+    try {
+      const res = await uploadMarketplaceImages(decodedPlate, files);
+      setCarImages(res.urls);
+      _cache.set(decodedPlate, { ..._cache.get(decodedPlate), car_images: res.urls });
+      toast(`${files.length} image${files.length > 1 ? "s" : ""} uploaded.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  function removeGalleryImage(url) {
+    const updated = carImages.filter((u) => u !== url);
+    setCarImages(updated);
   }
 
   async function handleSave(e) {
@@ -405,26 +456,79 @@ export default function MarketplaceListing() {
             <section className="panel-card">
               <header className="card-head">
                 <h2>Media</h2>
-                <p>Cover image URL shown as the primary photo</p>
+                <p>Upload a cover photo and gallery images for the listing</p>
               </header>
+
+              {/* Cover image */}
               <div className="field">
-                <label htmlFor="mkt-cover">Cover image URL</label>
+                <label>Cover image</label>
+                {coverImage && (
+                  <img
+                    src={coverImage}
+                    alt="Cover preview"
+                    className="mkt-cover-preview"
+                    onError={(e) => { e.target.style.display = "none"; }}
+                  />
+                )}
                 <input
-                  id="mkt-cover"
-                  type="url"
-                  placeholder="https://…"
-                  value={coverImage}
-                  onChange={(e) => setCoverImage(e.target.value)}
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handleCoverUpload}
                 />
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={uploading}
+                  onClick={() => coverInputRef.current?.click()}
+                >
+                  {coverImage ? "Replace cover image" : "Upload cover image"}
+                </button>
               </div>
-              {coverImage && (
-                <img
-                  src={coverImage}
-                  alt="Cover preview"
-                  className="mkt-cover-preview"
-                  onError={(e) => { e.target.style.display = "none"; }}
+
+              {/* Gallery images */}
+              <div className="field" style={{ marginTop: "1rem" }}>
+                <label>Gallery images</label>
+                {carImages.length > 0 && (
+                  <div className="mkt-gallery-grid">
+                    {carImages.map((url) => (
+                      <div key={url} className="mkt-gallery-item">
+                        <img
+                          src={url}
+                          alt="Gallery"
+                          onError={(e) => { e.target.style.display = "none"; }}
+                        />
+                        <button
+                          type="button"
+                          className="mkt-gallery-remove"
+                          onClick={() => removeGalleryImage(url)}
+                          aria-label="Remove image"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: "none" }}
+                  onChange={handleGalleryUpload}
                 />
-              )}
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={uploading}
+                  onClick={() => galleryInputRef.current?.click()}
+                  style={{ marginTop: carImages.length > 0 ? "0.5rem" : 0 }}
+                >
+                  {uploading ? "Uploading…" : "Add images"}
+                </button>
+              </div>
             </section>
 
           </div>

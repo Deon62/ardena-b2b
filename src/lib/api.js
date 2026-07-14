@@ -691,3 +691,23 @@ export function deleteMarketplaceListing(plate) {
     method: "DELETE",
   });
 }
+
+// Upload a single cover image for a marketplace listing. Returns { url }.
+export function uploadMarketplaceCover(plate, file) {
+  const form = new FormData();
+  form.append("file", file);
+  return request(`/fleet/${encodeURIComponent(plate)}/marketplace/upload-cover`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+// Upload one or more gallery images. Returns { urls } — the full merged list.
+export function uploadMarketplaceImages(plate, files) {
+  const form = new FormData();
+  for (const f of files) form.append("files", f);
+  return request(`/fleet/${encodeURIComponent(plate)}/marketplace/upload-images`, {
+    method: "POST",
+    body: form,
+  });
+}
