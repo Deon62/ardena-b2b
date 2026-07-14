@@ -77,6 +77,12 @@ export default function VehicleDetails() {
           </div>
         </div>
         <div className="details-actions">
+          <Link
+            to={`/dashboard/fleet/${encodeURIComponent(v.plate)}/marketplace`}
+            className="btn btn-ghost"
+          >
+            Marketplace
+          </Link>
           <button type="button" className="btn btn-ghost" disabled title="Editing is coming soon">
             Edit
           </button>

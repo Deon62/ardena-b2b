@@ -188,6 +188,13 @@ export default function Fleet() {
                         >
                           View
                         </Link>
+                        <Link
+                          className="icon-btn"
+                          to={`/dashboard/fleet/${encodeURIComponent(v.plate)}/marketplace`}
+                          title="Manage marketplace listing"
+                        >
+                          Marketplace
+                        </Link>
                         <button
                           type="button"
                           className="icon-btn danger"

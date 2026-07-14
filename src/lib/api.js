@@ -654,3 +654,40 @@ export function connectTracker(plate, payload) {
 export function disconnectTracker(plate) {
   return request(`/vehicles/${encodeURIComponent(plate)}/tracker`, { method: "DELETE" });
 }
+
+/* ---- Marketplace Visibility (§E) ---- */
+
+// Returns the listing for a vehicle, or 404 if none exists yet.
+export function fetchMarketplaceListing(plate) {
+  return request(`/fleet/${encodeURIComponent(plate)}/marketplace`);
+}
+
+// Create or update listing fields (does NOT publish). Returns the updated listing.
+export function saveMarketplaceListing(plate, payload) {
+  return request(`/fleet/${encodeURIComponent(plate)}/marketplace`, {
+    method: "PUT",
+    body: payload,
+  });
+}
+
+// Publish the vehicle to the Ardena marketplace.
+// Requires commission_acknowledged=true, description, and cover_image to be set.
+export function publishMarketplaceListing(plate) {
+  return request(`/fleet/${encodeURIComponent(plate)}/marketplace/publish`, {
+    method: "POST",
+  });
+}
+
+// Hide the vehicle from the marketplace (Car record is kept for re-publish).
+export function hideMarketplaceListing(plate) {
+  return request(`/fleet/${encodeURIComponent(plate)}/marketplace/hide`, {
+    method: "POST",
+  });
+}
+
+// Delete the listing entirely (Car is hidden but preserved for audit).
+export function deleteMarketplaceListing(plate) {
+  return request(`/fleet/${encodeURIComponent(plate)}/marketplace`, {
+    method: "DELETE",
+  });
+}

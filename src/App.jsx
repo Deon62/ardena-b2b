@@ -35,6 +35,7 @@ import Support from "./dashboard/Support";
 import Notifications from "./dashboard/Notifications";
 import Settings from "./dashboard/Settings";
 import Placeholder from "./dashboard/Placeholder";
+import MarketplaceListing from "./dashboard/MarketplaceListing";
 
 // Gate the dashboard behind a session; reacts to the session being
 // cleared (e.g. an expired token) by bouncing back to sign-in.
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="fleet" element={<Fleet />} />
         <Route path="fleet/new" element={<AddVehicle />} />
         <Route path="fleet/:plate" element={<VehicleDetails />} />
+        <Route path="fleet/:plate/marketplace" element={<MarketplaceListing />} />
         <Route path="bookings" element={<Bookings />} />
         <Route path="bookings/new" element={<NewBooking />} />
         <Route path="bookings/:ref" element={<BookingDetails />} />
