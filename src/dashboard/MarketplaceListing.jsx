@@ -9,6 +9,7 @@ import {
   uploadMarketplaceImages,
 } from "../lib/api";
 import { toast } from "./toastStore";
+import Dropdown from "../components/Dropdown";
 import "./fleet.css";
 import "./marketplace.css";
 
@@ -376,17 +377,23 @@ export default function MarketplaceListing() {
               <div className="form-row form-row-2">
                 <div className="field">
                   <label htmlFor="mkt-fuel">Fuel type</label>
-                  <select id="mkt-fuel" value={fuelType} onChange={(e) => setFuelType(e.target.value)}>
-                    <option value="">— select —</option>
-                    {FUEL_TYPES.map((f) => <option key={f} value={f}>{f}</option>)}
-                  </select>
+                  <Dropdown
+                    id="mkt-fuel"
+                    value={fuelType}
+                    onChange={setFuelType}
+                    options={FUEL_TYPES}
+                    placeholder="Select fuel type"
+                  />
                 </div>
                 <div className="field">
                   <label htmlFor="mkt-trans">Transmission</label>
-                  <select id="mkt-trans" value={transmission} onChange={(e) => setTransmission(e.target.value)}>
-                    <option value="">— select —</option>
-                    {TRANSMISSIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <Dropdown
+                    id="mkt-trans"
+                    value={transmission}
+                    onChange={setTransmission}
+                    options={TRANSMISSIONS}
+                    placeholder="Select transmission"
+                  />
                 </div>
               </div>
 
@@ -622,11 +629,12 @@ export default function MarketplaceListing() {
               </header>
               <div className="field">
                 <label htmlFor="mkt-drive">Drive setting</label>
-                <select id="mkt-drive" value={driveSetting} onChange={(e) => setDriveSetting(e.target.value)}>
-                  {DRIVE_SETTINGS.map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  id="mkt-drive"
+                  value={driveSetting}
+                  onChange={setDriveSetting}
+                  options={DRIVE_SETTINGS}
+                />
               </div>
               <label className="checkbox-row">
                 <input
