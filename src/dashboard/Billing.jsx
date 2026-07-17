@@ -47,6 +47,7 @@ function normalizeTxn(t) {
     id: t.id || t.reference || `${t.date || ""}-${t.amount}`,
     amount,
     isTopup,
+    status: String(t.status || "completed").toLowerCase(),
     method: t.method || t.channel || t.description || (isTopup ? "Top-up" : "Renter check"),
     date: (t.date || t.created_at || "").slice(0, 10),
   };
@@ -210,7 +211,7 @@ export default function Billing() {
 
   const totalSpend = usage ? usage.total : 0;
   const paidInvoices = invoices.filter((i) => i.status === "Paid");
-  const topups = txns.filter((t) => t.isTopup);
+  const topups = txns.filter((t) => t.isTopup && t.status === "completed");
   const toppedUpTotal = topups.reduce((sum, t) => sum + t.amount, 0);
 
   return (

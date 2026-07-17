@@ -284,7 +284,13 @@ export function topupWallet(payload, idempotencyKey) {
   });
 }
 
-// Poll a top-up's status after returning from checkout / an STK prompt
+// Poll a top-up's status after returning from checkout / an STK prompt.
+// Works for both M-Pesa (Paystack charge) and card (Paystack checkout).
+export function checkTopupStatus(reference) {
+  return request(`/verification/wallet/topup/check/${encodeURIComponent(reference)}`);
+}
+
+// Legacy card-only verify (Paystack redirect flow). Keep for direct use.
 export function verifyTopup(reference) {
   return request("/verification/wallet/topup/verify", {
     method: "POST",
