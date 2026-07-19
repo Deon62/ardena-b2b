@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import PageSkeleton from "./PageSkeleton";
 import {
   fetchSubscription,
@@ -56,6 +56,7 @@ function normalizeTxn(t) {
 
 export default function Billing() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [sub, setSub] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [usage, setUsage] = useState(null);
@@ -224,8 +225,8 @@ export default function Billing() {
         const res = await checkInvoiceCharge(ref);
         if (res.charge_status === "success") {
           stopInvPolling();
-          await load();
           toast("Payment confirmed! Your subscription is active.");
+          navigate("/dashboard");
         } else if (res.charge_status === "failed" || res.charge_status === "timeout") {
           stopInvPolling();
           await load();
