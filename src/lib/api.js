@@ -520,6 +520,11 @@ export function fetchSubscription() {
   return request("/billing/subscription");
 }
 
+// { gated, status, vehicle_count, due_amount, fleet_cap }
+export function fetchBillingGate() {
+  return request("/billing/gate");
+}
+
 // { data: [{ ref, title, detail, amount, status, due_date, paid_at, checkout_url }], has_due }
 export function fetchInvoices() {
   return request("/billing/invoices");
